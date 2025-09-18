@@ -76,6 +76,8 @@ function App() {
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
   const [showAddGoalModal, setShowAddGoalModal] = useState(false);
+  const [showEditTaskModal, setShowEditTaskModal] = useState(false);
+  const [editingTask, setEditingTask] = useState(null);
 
   // Toast notification state
   const [toasts, setToasts] = useState([]);
@@ -146,6 +148,17 @@ function App() {
   const closeModal = (modalId) => {
     if (modalId === 'add-task-modal') {
       setShowAddTaskModal(false);
+      setTaskForm({
+        title: '',
+        description: '',
+        priority: 'medium',
+        category: 'assignment',
+        dueDate: '',
+        estimatedTime: '',
+      });
+    } else if (modalId === 'edit-task-modal') {
+      setShowEditTaskModal(false);
+      setEditingTask(null);
       setTaskForm({
         title: '',
         description: '',
@@ -291,8 +304,19 @@ function App() {
   };
 
   const editTask = (taskId) => {
-    // In a real app, this would open an edit modal
-    console.log(`Edit task: ${taskId}`);
+    const task = tasks.find(t => t.id === taskId);
+    if (task) {
+      setEditingTask(task);
+      setTaskForm({
+        title: task.title,
+        description: task.description,
+        priority: task.priority,
+        category: task.category,
+        dueDate: task.dueDate ? task.dueDate.toISOString().split('T')[0] : '',
+        estimatedTime: task.estimatedTime || '',
+      });
+      setShowEditTaskModal(true);
+    }
   };
 
   const updateTaskProgress = (taskId, progress) => {
@@ -367,6 +391,37 @@ function App() {
     setTasks((prevTasks) => [...prevTasks, newTask]);
     addToast(`Task "${newTask.title}" added successfully!`, 'success');
     closeModal('add-task-modal');
+  };
+
+  const handleEditTask = (e) => {
+    e.preventDefault();
+    if (!taskForm.title.trim()) {
+      addToast('Please enter a task title', 'error');
+      return;
+    }
+
+    if (!editingTask) {
+      addToast('No task selected for editing', 'error');
+      return;
+    }
+
+    const updatedTask = {
+      ...editingTask,
+      title: taskForm.title.trim(),
+      description: taskForm.description.trim(),
+      priority: taskForm.priority,
+      category: taskForm.category,
+      dueDate: taskForm.dueDate ? new Date(taskForm.dueDate) : null,
+      estimatedTime: parseFloat(taskForm.estimatedTime) || 0,
+    };
+
+    setTasks((prevTasks) =>
+      prevTasks.map((task) =>
+        task.id === editingTask.id ? updatedTask : task
+      )
+    );
+    addToast(`Task "${updatedTask.title}" updated successfully!`, 'success');
+    closeModal('edit-task-modal');
   };
 
   const handleAddGoal = (e) => {
@@ -1188,6 +1243,139 @@ function App() {
                   </button>
                   <button type="submit" className="btn-primary">
                     Add Task
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Task Modal */}
+      {showEditTaskModal && (
+        <div className="modal show" id="edit-task-modal">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3>
+                <i className="fas fa-edit"></i> Edit Task
+              </h3>
+              <button
+                className="close-btn"
+                onClick={() => closeModal('edit-task-modal')}
+              >
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M18 6L6 18M6 6L18 18"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+            </div>
+            <div className="modal-body">
+              <form id="edit-task-form" onSubmit={handleEditTask}>
+                <div className="form-group">
+                  <label htmlFor="edit-task-title">Task Title</label>
+                  <input
+                    type="text"
+                    id="edit-task-title"
+                    value={taskForm.title}
+                    onChange={(e) =>
+                      handleTaskFormChange('title', e.target.value)
+                    }
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="edit-task-description">Description</label>
+                  <textarea
+                    id="edit-task-description"
+                    rows="3"
+                    value={taskForm.description}
+                    onChange={(e) =>
+                      handleTaskFormChange('description', e.target.value)
+                    }
+                  ></textarea>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="edit-task-priority">Priority</label>
+                    <select
+                      id="edit-task-priority"
+                      value={taskForm.priority}
+                      onChange={(e) =>
+                        handleTaskFormChange('priority', e.target.value)
+                      }
+                    >
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="edit-task-category">Category</label>
+                    <select
+                      id="edit-task-category"
+                      value={taskForm.category}
+                      onChange={(e) =>
+                        handleTaskFormChange('category', e.target.value)
+                      }
+                    >
+                      <option value="assignment">Assignment</option>
+                      <option value="exam">Exam</option>
+                      <option value="project">Project</option>
+                      <option value="reading">Reading</option>
+                      <option value="research">Research</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label htmlFor="edit-task-due-date">Due Date</label>
+                    <input
+                      type="date"
+                      id="edit-task-due-date"
+                      value={taskForm.dueDate}
+                      onChange={(e) =>
+                        handleTaskFormChange('dueDate', e.target.value)
+                      }
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="edit-task-estimated-time">
+                      Estimated Time (hours)
+                    </label>
+                    <input
+                      type="number"
+                      id="edit-task-estimated-time"
+                      min="0.5"
+                      step="0.5"
+                      value={taskForm.estimatedTime}
+                      onChange={(e) =>
+                        handleTaskFormChange('estimatedTime', e.target.value)
+                      }
+                    />
+                  </div>
+                </div>
+                <div className="form-actions">
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    onClick={() => closeModal('edit-task-modal')}
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn-primary">
+                    Update Task
                   </button>
                 </div>
               </form>

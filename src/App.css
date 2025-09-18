@@ -22,6 +22,10 @@
   --card-bg: #ffffff;
   --input-bg: #ffffff;
   --hover-bg: rgba(0, 0, 0, 0.05);
+  
+  /* Mobile performance optimizations */
+  --mobile-transition: 0.15s ease;
+  --mobile-fast-transition: 0.1s ease;
 }
 
 [data-theme='dark'] {
@@ -316,7 +320,7 @@ body {
 
 .tab-content {
   display: none;
-  padding-top: 1rem; /* Reduced padding since main-content already has padding */
+  padding-top: 1.5rem; /* Increased padding since main-content already has padding */
 }
 
 .tab-content.active {
@@ -1154,6 +1158,8 @@ body {
   overflow: hidden;
   box-shadow: 0 8px 25px var(--shadow-light);
   border: 1px solid var(--border-color);
+  width: 100%;
+  max-width: 100%;
 }
 
 .calendar-header-day {
@@ -2771,11 +2777,13 @@ body:not([data-theme='dark']) .form-group textarea:focus {
 
   .main-content {
     padding: 1.25rem;
-    padding-top: 0.75rem; /* Smaller top padding for mobile */
+    padding-top: 1.5rem; /* Increased top padding for mobile */
     margin-top: 0; /* Remove margin */
     min-height: calc(
       100vh - 160px
     ); /* Account for larger mobile header + nav */
+    will-change: scroll-position; /* Optimize for smooth scrolling */
+    -webkit-overflow-scrolling: touch; /* Smooth iOS scrolling */
   }
 
   .dashboard-grid {
@@ -2832,6 +2840,22 @@ body:not([data-theme='dark']) .form-group textarea:focus {
 
   .task-item {
     padding: 1.5rem 1.25rem;
+    margin-bottom: 1.25rem; /* Add margin between tasks for tablet */
+    transition: transform 0.15s ease, box-shadow 0.15s ease; /* Faster transitions for mobile */
+    will-change: transform; /* Optimize for animations */
+  }
+
+  .task-item:hover {
+    transform: translateY(-1px); /* Reduced movement for mobile */
+  }
+
+  .task-item:active {
+    transform: translateY(1px); /* Quick feedback for mobile taps */
+    transition: transform 0.1s ease;
+  }
+
+  .task-list {
+    gap: 1.25rem; /* Ensure gap is maintained in tablet view */
   }
 
   .task-actions {
@@ -2946,7 +2970,7 @@ body:not([data-theme='dark']) .form-group textarea:focus {
 
   .main-content {
     padding: 1rem;
-    padding-top: 0.5rem; /* Smaller top padding for small screens */
+    padding-top: 1.25rem; /* Increased top padding for small screens */
     margin-top: 0; /* Remove margin */
     min-height: calc(100vh - 100px); /* Adjust for small screen header + nav */
   }
@@ -2999,6 +3023,21 @@ body:not([data-theme='dark']) .form-group textarea:focus {
 
   .task-item {
     padding: 1.25rem 1rem;
+    margin-bottom: 1rem; /* Add margin between tasks for mobile */
+    transition: transform 0.1s ease, background-color 0.1s ease; /* Ultra-fast transitions */
+  }
+
+  .task-item:hover {
+    transform: none; /* Disable hover effects on mobile for better performance */
+  }
+
+  .task-item:active {
+    background-color: var(--hover-bg);
+    transform: scale(0.98);
+  }
+
+  .task-list {
+    gap: 1rem; /* Ensure gap is maintained in mobile */
   }
 
   .task-title {
@@ -3123,7 +3162,7 @@ body:not([data-theme='dark']) .form-group textarea:focus {
 
   .main-content {
     padding: 1rem 0.75rem;
-    padding-top: 0.5rem; /* Minimal top padding for very small screens */
+    padding-top: 1rem; /* Increased top padding for very small screens */
     margin-top: 0; /* Remove margin */
     min-height: calc(
       100vh - 140px
@@ -3183,11 +3222,21 @@ body:not([data-theme='dark']) .form-group textarea:focus {
 
   .calendar-grid {
     gap: 1px;
+    grid-template-columns: repeat(7, 1fr); /* Ensure 7 columns are maintained */
+    min-width: 100%; /* Ensure full width */
+    width: 100%;
+    max-width: none; /* Remove any width constraints */
+    overflow: visible; /* Change from auto to visible */
+    box-sizing: border-box;
   }
 
   .calendar-day {
     padding: 0.25rem;
     min-height: 60px;
+    min-width: calc((100vw - 3rem - 7px) / 7); /* Calculate exact width for 7 columns */
+    max-width: calc((100vw - 3rem - 7px) / 7);
+    box-sizing: border-box;
+    font-size: 0.7rem;
   }
 
   .day-number {
@@ -3644,6 +3693,179 @@ body:not([data-theme='dark']) .form-group textarea:focus {
     100% {
       transform: translateY(-120%);
       opacity: 0;
+    }
+  }
+}
+
+/* Mobile-specific tab content spacing fixes */
+@media (max-width: 768px) {
+  .tab-content {
+    padding-top: 1.5rem; /* Add more space between navigation and content */
+  }
+  
+  .tab-content.active {
+    padding-top: 1.5rem; /* Ensure active tabs also have proper spacing */
+  }
+  
+  /* Specific spacing for each tab content section */
+  .dashboard-grid {
+    margin-top: 0.5rem;
+  }
+  
+  .tasks-header,
+  .calendar-header,
+  .goals-header,
+  .statistics-header {
+    margin-top: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  /* Calendar mobile improvements */
+  .calendar-container {
+    width: 100%;
+    overflow-x: visible;
+    margin: 0;
+    padding: 0;
+  }
+
+  .calendar-grid {
+    min-width: 100%;
+    width: 100%;
+    margin: 0 auto;
+    box-sizing: border-box;
+  }
+
+  .calendar-header {
+    margin-bottom: 1rem;
+    width: 100%;
+  }
+
+  .calendar-controls {
+    margin-bottom: 1rem;
+    width: 100%;
+  }
+
+  .calendar-header-day {
+    padding: 0.5rem 0.25rem;
+    font-size: 0.75rem;
+    text-align: center;
+  }
+}
+
+@media (max-width: 600px) {
+  .tab-content {
+    padding-top: 1.25rem;
+  }
+  
+  .tab-content.active {
+    padding-top: 1.25rem;
+  }
+
+  /* Calendar mobile improvements for smaller screens */
+  .calendar-grid {
+    overflow-x: visible;
+    -webkit-overflow-scrolling: touch;
+    will-change: transform; /* Optimize for smooth animations */
+  }
+
+  .calendar-day {
+    min-width: calc((100vw - 2.5rem - 7px) / 7); /* Adjusted for smaller screens */
+    max-width: calc((100vw - 2.5rem - 7px) / 7);
+    transition: transform 0.15s ease, background-color 0.15s ease; /* Faster, smoother transitions */
+  }
+
+  .calendar-day:hover {
+    transform: none; /* Disable hover scaling on mobile for better performance */
+  }
+
+  .calendar-day:active {
+    transform: scale(0.95); /* Quick feedback on tap */
+    transition: transform 0.1s ease;
+  }
+}
+
+@media (max-width: 400px) {
+  .tab-content {
+    padding-top: 1rem;
+  }
+  
+  .tab-content.active {
+    padding-top: 1rem;
+  }
+
+  /* Calendar mobile improvements for very small screens */
+  .calendar-header h2 {
+    font-size: 1.2rem;
+  }
+
+  .calendar-grid {
+    gap: 0.5px;
+    border-radius: 12px; /* Slightly smaller border radius for very small screens */
+  }
+
+  .calendar-day {
+    min-width: calc((100vw - 2rem - 7px) / 7); /* Even more precise calculation for tiny screens */
+    max-width: calc((100vw - 2rem - 7px) / 7);
+    font-size: 0.65rem;
+    padding: 0.2rem;
+    min-height: 50px;
+  }
+
+  .calendar-header-day {
+    padding: 0.4rem 0.1rem;
+    font-size: 0.65rem;
+  }
+
+  .day-number {
+    font-size: 0.65rem;
+    margin-bottom: 0.1rem;
+  }
+
+  .calendar-controls button {
+    width: 32px;
+    height: 32px;
+    font-size: 0.7rem;
+  }
+}
+
+/* Global Mobile Performance Optimizations */
+@media (max-width: 768px) {
+  /* Optimize all buttons for touch */
+  .btn-primary, .btn-secondary, button {
+    transition: var(--mobile-transition);
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  /* Optimize all cards and interactive elements */
+  .stats-card, .task-item, .goal-item, .modal-content {
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+
+  /* Disable hover effects on mobile for better performance */
+  .stats-card:hover, .nav-tab:hover {
+    transform: none;
+  }
+
+  /* Quick active feedback for mobile taps */
+  .stats-card:active, .nav-tab:active {
+    transform: scale(0.98);
+    transition: var(--mobile-fast-transition);
+  }
+
+  /* Optimize scrolling performance */
+  .main-content, .modal-body {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Reduce motion for users who prefer it */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
     }
   }
 }
