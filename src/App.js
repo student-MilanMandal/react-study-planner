@@ -304,7 +304,7 @@ function App() {
   };
 
   const editTask = (taskId) => {
-    const task = tasks.find(t => t.id === taskId);
+    const task = tasks.find((t) => t.id === taskId);
     if (task) {
       setEditingTask(task);
       setTaskForm({
@@ -416,9 +416,7 @@ function App() {
     };
 
     setTasks((prevTasks) =>
-      prevTasks.map((task) =>
-        task.id === editingTask.id ? updatedTask : task
-      )
+      prevTasks.map((task) => (task.id === editingTask.id ? updatedTask : task))
     );
     addToast(`Task "${updatedTask.title}" updated successfully!`, 'success');
     closeModal('edit-task-modal');

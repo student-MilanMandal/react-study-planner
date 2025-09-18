@@ -22,7 +22,7 @@
   --card-bg: #ffffff;
   --input-bg: #ffffff;
   --hover-bg: rgba(0, 0, 0, 0.05);
-  
+
   /* Mobile performance optimizations */
   --mobile-transition: 0.15s ease;
   --mobile-fast-transition: 0.1s ease;
@@ -3233,7 +3233,9 @@ body:not([data-theme='dark']) .form-group textarea:focus {
   .calendar-day {
     padding: 0.25rem;
     min-height: 60px;
-    min-width: calc((100vw - 3rem - 7px) / 7); /* Calculate exact width for 7 columns */
+    min-width: calc(
+      (100vw - 3rem - 7px) / 7
+    ); /* Calculate exact width for 7 columns */
     max-width: calc((100vw - 3rem - 7px) / 7);
     box-sizing: border-box;
     font-size: 0.7rem;
@@ -3702,16 +3704,16 @@ body:not([data-theme='dark']) .form-group textarea:focus {
   .tab-content {
     padding-top: 1.5rem; /* Add more space between navigation and content */
   }
-  
+
   .tab-content.active {
     padding-top: 1.5rem; /* Ensure active tabs also have proper spacing */
   }
-  
+
   /* Specific spacing for each tab content section */
   .dashboard-grid {
     margin-top: 0.5rem;
   }
-  
+
   .tasks-header,
   .calendar-header,
   .goals-header,
@@ -3756,7 +3758,7 @@ body:not([data-theme='dark']) .form-group textarea:focus {
   .tab-content {
     padding-top: 1.25rem;
   }
-  
+
   .tab-content.active {
     padding-top: 1.25rem;
   }
@@ -3769,7 +3771,9 @@ body:not([data-theme='dark']) .form-group textarea:focus {
   }
 
   .calendar-day {
-    min-width: calc((100vw - 2.5rem - 7px) / 7); /* Adjusted for smaller screens */
+    min-width: calc(
+      (100vw - 2.5rem - 7px) / 7
+    ); /* Adjusted for smaller screens */
     max-width: calc((100vw - 2.5rem - 7px) / 7);
     transition: transform 0.15s ease, background-color 0.15s ease; /* Faster, smoother transitions */
   }
@@ -3788,7 +3792,7 @@ body:not([data-theme='dark']) .form-group textarea:focus {
   .tab-content {
     padding-top: 1rem;
   }
-  
+
   .tab-content.active {
     padding-top: 1rem;
   }
@@ -3804,7 +3808,9 @@ body:not([data-theme='dark']) .form-group textarea:focus {
   }
 
   .calendar-day {
-    min-width: calc((100vw - 2rem - 7px) / 7); /* Even more precise calculation for tiny screens */
+    min-width: calc(
+      (100vw - 2rem - 7px) / 7
+    ); /* Even more precise calculation for tiny screens */
     max-width: calc((100vw - 2rem - 7px) / 7);
     font-size: 0.65rem;
     padding: 0.2rem;
@@ -3831,38 +3837,48 @@ body:not([data-theme='dark']) .form-group textarea:focus {
 /* Global Mobile Performance Optimizations */
 @media (max-width: 768px) {
   /* Optimize all buttons for touch */
-  .btn-primary, .btn-secondary, button {
+  .btn-primary,
+  .btn-secondary,
+  button {
     transition: var(--mobile-transition);
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
   }
 
   /* Optimize all cards and interactive elements */
-  .stats-card, .task-item, .goal-item, .modal-content {
+  .stats-card,
+  .task-item,
+  .goal-item,
+  .modal-content {
     will-change: transform;
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
   }
 
   /* Disable hover effects on mobile for better performance */
-  .stats-card:hover, .nav-tab:hover {
+  .stats-card:hover,
+  .nav-tab:hover {
     transform: none;
   }
 
   /* Quick active feedback for mobile taps */
-  .stats-card:active, .nav-tab:active {
+  .stats-card:active,
+  .nav-tab:active {
     transform: scale(0.98);
     transition: var(--mobile-fast-transition);
   }
 
   /* Optimize scrolling performance */
-  .main-content, .modal-body {
+  .main-content,
+  .modal-body {
     -webkit-overflow-scrolling: touch;
   }
 
   /* Reduce motion for users who prefer it */
   @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after {
+    *,
+    *::before,
+    *::after {
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
