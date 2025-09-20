@@ -26,50 +26,149 @@ const useLocalStorage = (key, initialValue) => {
   return [storedValue, setValue];
 };
 
-// Helper function to normalize dates from localStorage
+// Time conversion constants (explicit, correct)
+const TIME_CONSTANTS = {
+  MS_PER_SECOND: 1000,
+  SECONDS_PER_MINUTE: 60,
+  MINUTES_PER_HOUR: 60,
+  MS_PER_MINUTE: 60 * 1000, // 60,000 ms
+  MS_PER_HOUR: 60 * 60 * 1000, // 3,600,000 ms
+  SECONDS_PER_HOUR: 60 * 60, // 3,600 seconds
+};
+
+// Helper function to convert minutes to milliseconds (for precise progress calculation)
+const minutesToMilliseconds = (minutes) => {
+  return minutes * TIME_CONSTANTS.MS_PER_MINUTE; // minutes * 60 * 1000
+};
+
+// Helper function to convert milliseconds to seconds with explicit calculation
+const msToSeconds = (milliseconds) => {
+  return milliseconds / TIME_CONSTANTS.MS_PER_SECOND;
+};
+
+// Helper function to convert minutes to seconds (for progress calculation)
+const minutesToSeconds = (minutes) => {
+  return minutes * TIME_CONSTANTS.SECONDS_PER_MINUTE;
+};
+
+// Helper function to convert milliseconds to hours with explicit calculation
+const msToHours = (milliseconds) => {
+  return milliseconds / TIME_CONSTANTS.MS_PER_HOUR;
+};
+
+// Helper function to convert minutes to hours
+const minutesToHours = (minutes) => {
+  return minutes / TIME_CONSTANTS.MINUTES_PER_HOUR;
+};
+
+// Helper function to convert hours to minutes
+const hoursToMinutes = (hours) => {
+  return hours * TIME_CONSTANTS.MINUTES_PER_HOUR;
+};
 const normalizeTaskDates = (tasks) => {
-  return tasks.map((task) => ({
-    ...task,
-    createdAt: task.createdAt ? new Date(task.createdAt) : null,
-    dueDate: task.dueDate ? new Date(task.dueDate) : null,
-    completedAt: task.completedAt ? new Date(task.completedAt) : null,
-  }));
+  try {
+    if (!Array.isArray(tasks)) return [];
+    return tasks.map((task) => ({
+      ...task,
+      createdAt: task.createdAt ? new Date(task.createdAt) : null,
+      dueDate: task.dueDate ? new Date(task.dueDate) : null,
+      completedAt: task.completedAt ? new Date(task.completedAt) : null,
+    }));
+  } catch (error) {
+    console.error('Error normalizing task dates:', error);
+    return [];
+  }
 };
 
 const normalizeGoalDates = (goals) => {
-  return goals.map((goal) => ({
-    ...goal,
-    createdAt: goal.createdAt ? new Date(goal.createdAt) : null,
-    targetDate: goal.targetDate ? new Date(goal.targetDate) : null,
-  }));
+  try {
+    if (!Array.isArray(goals)) return [];
+    return goals.map((goal) => ({
+      ...goal,
+      createdAt: goal.createdAt ? new Date(goal.createdAt) : null,
+      targetDate: goal.targetDate ? new Date(goal.targetDate) : null,
+    }));
+  } catch (error) {
+    console.error('Error normalizing goal dates:', error);
+    return [];
+  }
+};
+
+// Helper function to format time in appropriate units
+const formatTime = (hours) => {
+  const minutes = Math.round(hours * 60);
+  if (minutes < 60) {
+    return `${minutes}m`;
+  } else {
+    const hrs = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return mins > 0 ? `${hrs}h ${mins}m` : `${hrs}h`;
+  }
 };
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [theme, setTheme] = useLocalStorage('studyPlannerTheme', 'light');
-  const [rawTasks, setRawTasks] = useLocalStorage('studyPlannerTasks', []);
-  const [rawGoals, setRawGoals] = useLocalStorage('studyPlannerGoals', []);
 
-  // Normalize dates when loading from localStorage
-  const tasks = normalizeTaskDates(rawTasks);
-  const goals = normalizeGoalDates(rawGoals);
+  // Simple state management - direct useState instead of complex useLocalStorage
+  const [tasks, setTasks] = useState(() => {
+    try {
+      const saved = localStorage.getItem('studyPlannerTasks');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Migrate old data: if estimatedTime < 24, it's likely in hours, so convert to minutes
+        const migrated = parsed.map((task) => ({
+          ...task,
+          estimatedTime:
+            task.estimatedTime < 24
+              ? task.estimatedTime * 60
+              : task.estimatedTime,
+        }));
+        return normalizeTaskDates(migrated);
+      }
+      return [];
+    } catch (error) {
+      console.error('Error loading tasks:', error);
+      return [];
+    }
+  });
 
-  // Use normalized setters
-  const setTasks = (newTasks) => {
-    setRawTasks(
-      typeof newTasks === 'function'
-        ? (prev) => newTasks(normalizeTaskDates(prev))
-        : newTasks
-    );
-  };
+  const [goals, setGoals] = useState(() => {
+    try {
+      const saved = localStorage.getItem('studyPlannerGoals');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Migrate old data: if estimatedTime < 24, it's likely in hours, so convert to minutes
+        const migrated = parsed.map((goal) => ({
+          ...goal,
+          estimatedTime:
+            goal.estimatedTime < 24
+              ? goal.estimatedTime * 60
+              : goal.estimatedTime,
+        }));
+        return normalizeGoalDates(migrated);
+      }
+      return [];
+    } catch (error) {
+      console.error('Error loading goals:', error);
+      return [];
+    }
+  }); // Save to localStorage whenever tasks/goals change
+  useEffect(() => {
+    try {
+      localStorage.setItem('studyPlannerTasks', JSON.stringify(tasks));
+    } catch (error) {
+      console.error('Error saving tasks:', error);
+    }
+  }, [tasks]);
 
-  const setGoals = (newGoals) => {
-    setRawGoals(
-      typeof newGoals === 'function'
-        ? (prev) => newGoals(normalizeGoalDates(prev))
-        : newGoals
-    );
-  };
+  useEffect(() => {
+    try {
+      localStorage.setItem('studyPlannerGoals', JSON.stringify(goals));
+    } catch (error) {
+      console.error('Error saving goals:', error);
+    }
+  }, [goals]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentCalendarDate, setCurrentCalendarDate] = useState(new Date());
   const [taskFilter, setTaskFilter] = useState('all');
@@ -78,6 +177,10 @@ function App() {
   const [showAddGoalModal, setShowAddGoalModal] = useState(false);
   const [showEditTaskModal, setShowEditTaskModal] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
+
+  // Timer state management
+  const [activeTimers, setActiveTimers] = useState({}); // { taskId: { startTime, elapsedTime, isRunning } }
+  const [activeGoalTimers, setActiveGoalTimers] = useState({}); // { goalId: { startTime, elapsedTime, isRunning } }
 
   // Toast notification state
   const [toasts, setToasts] = useState([]);
@@ -111,6 +214,7 @@ function App() {
     description: '',
     targetDate: '',
     category: 'academic',
+    estimatedTime: '',
   });
 
   // Apply theme on load and change
@@ -125,6 +229,405 @@ function App() {
     }, 60000);
     return () => clearInterval(timer);
   }, []);
+
+  // Timer functionality useEffect
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Update task timers
+      setActiveTimers((prevTimers) => {
+        const updatedTimers = { ...prevTimers };
+        let hasActiveTimers = false;
+
+        Object.keys(updatedTimers).forEach((taskId) => {
+          if (updatedTimers[taskId].isRunning) {
+            hasActiveTimers = true;
+            const startTime = updatedTimers[taskId].startTime;
+            const previousElapsedMs = updatedTimers[taskId].elapsedTime || 0;
+            // Calculate elapsed time in MILLISECONDS for precise progress calculation
+            const sessionElapsedMs = Date.now() - startTime; // milliseconds since start
+            const totalElapsedMs = previousElapsedMs + sessionElapsedMs; // total milliseconds
+
+            // Debug logging for timer calculation
+            if (
+              taskId === Object.keys(updatedTimers)[0] &&
+              sessionElapsedMs > 1000
+            ) {
+              console.log(`⚡ MILLISECOND TIMER DEBUG [${taskId}]:`, {
+                sessionElapsedMs,
+                previousElapsedMs,
+                totalElapsedMs,
+                realTimeSeconds: Math.round(sessionElapsedMs / 1000),
+                totalTimeSeconds: Math.round(totalElapsedMs / 1000),
+                // ADDITIONAL DEBUG
+                startTime,
+                currentTime: Date.now(),
+                timeDifference: Date.now() - startTime,
+                isTimeDifferenceCorrect:
+                  Date.now() - startTime === sessionElapsedMs,
+              });
+            }
+
+            // Update task progress based on time spent vs estimated time
+            setTasks((prevTasks) =>
+              prevTasks.map((task) => {
+                if (task.id === taskId && task.estimatedTime > 0) {
+                  // Convert task duration from minutes to milliseconds: totalTimeMs = minutes * 60 * 1000
+                  const taskEstimatedMinutes = task.estimatedTime; // Now stored in minutes
+                  const totalTimeMs = taskEstimatedMinutes * 60 * 1000; // EXACT FORMULA: minutes * 60 * 1000
+                  const elapsedMs = totalElapsedMs; // elapsedMs = Date.now() - startTime
+                  const rawProgressPercentage = (elapsedMs / totalTimeMs) * 100; // progress = (elapsedMs / totalTimeMs) * 100
+                  const progressPercentage = Math.min(
+                    Math.max(rawProgressPercentage, 0),
+                    100
+                  ); // Clamp to [0,100]
+
+                  // Calculate remaining time
+                  const remainingMs = Math.max(0, totalTimeMs - elapsedMs);
+                  const remainingMin = Math.floor(remainingMs / 60000);
+                  const remainingSec = Math.floor((remainingMs % 60000) / 1000);
+
+                  // Comprehensive debug with test case verification
+                  console.log(
+                    `🎯 TIMER PROGRESS DEBUG for Task "${task.title}":`,
+                    {
+                      taskEstimatedMinutes,
+                      totalTimeMs,
+                      elapsedMs,
+                      rawProgressPercentage,
+                      progressPercentage,
+                      remainingMs,
+                      remainingTime: `${remainingMin}m ${remainingSec}s`,
+                      equation: `${elapsedMs}ms / ${totalTimeMs}ms * 100 = ${rawProgressPercentage.toFixed(
+                        2
+                      )}%`,
+                      // TEST CASE VALIDATION
+                      testCase5Min:
+                        taskEstimatedMinutes === 5
+                          ? {
+                              expectedTotalMs: 300000,
+                              actualTotalMs: totalTimeMs,
+                              at6Seconds: `6000 / 300000 * 100 = 2%`,
+                              currentElapsedSec: Math.round(elapsedMs / 1000),
+                              shouldBe2PercentAt6s:
+                                elapsedMs >= 6000
+                                  ? ((6000 / totalTimeMs) * 100).toFixed(2) +
+                                    '% (expected 2%)'
+                                  : 'not reached 6s yet',
+                            }
+                          : null,
+                      testCase15Min:
+                        taskEstimatedMinutes === 15
+                          ? {
+                              expectedTotalMs: 900000,
+                              actualTotalMs: totalTimeMs,
+                              at2Minutes: `120000 / 900000 * 100 = 13.33%`,
+                              shouldBe13_33PercentAt2m:
+                                elapsedMs >= 120000
+                                  ? ((120000 / totalTimeMs) * 100).toFixed(2) +
+                                    '% (expected 13.33%)'
+                                  : 'not reached 2m yet',
+                            }
+                          : null,
+                      testCase1Min:
+                        taskEstimatedMinutes === 1
+                          ? {
+                              expectedTotalMs: 60000,
+                              actualTotalMs: totalTimeMs,
+                              at30Seconds: `30000 / 60000 * 100 = 50%`,
+                              shouldBe50PercentAt30s:
+                                elapsedMs >= 30000
+                                  ? ((30000 / totalTimeMs) * 100).toFixed(2) +
+                                    '% (expected 50%)'
+                                  : 'not reached 30s yet',
+                            }
+                          : null,
+                    }
+                  );
+
+                  // Auto-stop timer when 100% complete
+                  if (
+                    progressPercentage >= 100 &&
+                    updatedTimers[taskId].isRunning
+                  ) {
+                    updatedTimers[taskId] = {
+                      ...updatedTimers[taskId],
+                      isRunning: false,
+                      elapsedTime: totalElapsedMs, // Store elapsed time in milliseconds
+                    };
+                    addToast(`Task "${task.title}" completed!`, 'success');
+                  } else {
+                    updatedTimers[taskId] = {
+                      ...updatedTimers[taskId],
+                      elapsedTime: totalElapsedMs, // Store elapsed time in milliseconds
+                    };
+                  }
+
+                  return {
+                    ...task,
+                    progress: Math.round(progressPercentage),
+                    timeSpent: totalElapsedMs, // Store time spent in milliseconds
+                    status:
+                      progressPercentage >= 100
+                        ? 'completed'
+                        : progressPercentage > 0
+                        ? 'in-progress'
+                        : 'pending',
+                  };
+                }
+                return task;
+              })
+            );
+          }
+        });
+
+        return hasActiveTimers ? updatedTimers : prevTimers;
+      });
+
+      // Update goal timers
+      setActiveGoalTimers((prevTimers) => {
+        const updatedTimers = { ...prevTimers };
+        let hasActiveTimers = false;
+
+        Object.keys(updatedTimers).forEach((goalId) => {
+          if (updatedTimers[goalId].isRunning) {
+            hasActiveTimers = true;
+            const startTime = updatedTimers[goalId].startTime;
+            const previousElapsedMs = updatedTimers[goalId].elapsedTime || 0;
+            // Calculate elapsed time in MILLISECONDS for precise progress calculation
+            const sessionElapsedMs = Date.now() - startTime; // milliseconds since start
+            const totalElapsedMs = previousElapsedMs + sessionElapsedMs; // total milliseconds
+
+            // Update goal progress based on time spent vs estimated time
+            setGoals((prevGoals) =>
+              prevGoals.map((goal) => {
+                if (goal.id === goalId && goal.estimatedTime > 0) {
+                  // Convert goal duration from minutes to milliseconds: totalTimeMs = minutes * 60 * 1000
+                  const goalEstimatedMinutes = goal.estimatedTime; // Now stored in minutes
+                  const totalTimeMs = goalEstimatedMinutes * 60 * 1000; // EXACT FORMULA: minutes * 60 * 1000
+                  const elapsedMs = totalElapsedMs; // elapsedMs = Date.now() - startTime
+                  const rawProgressPercentage = (elapsedMs / totalTimeMs) * 100; // progress = (elapsedMs / totalTimeMs) * 100
+                  const progressPercentage = Math.min(
+                    Math.max(rawProgressPercentage, 0),
+                    100
+                  ); // Clamp to [0,100]
+
+                  // Calculate remaining time
+                  const remainingMs = Math.max(0, totalTimeMs - elapsedMs);
+                  const remainingMin = Math.floor(remainingMs / 60000);
+                  const remainingSec = Math.floor((remainingMs % 60000) / 1000);
+
+                  // Debug progress calculation with correct formula
+                  console.log(
+                    `🎯 TIMER PROGRESS DEBUG for Goal "${goal.title}":`,
+                    {
+                      goalEstimatedMinutes,
+                      totalTimeMs,
+                      elapsedMs,
+                      rawProgressPercentage,
+                      progressPercentage,
+                      remainingMs,
+                      remainingTime: `${remainingMin}m ${remainingSec}s`,
+                      equation: `${elapsedMs}ms / ${totalTimeMs}ms * 100 = ${rawProgressPercentage.toFixed(
+                        2
+                      )}%`,
+                    }
+                  );
+
+                  // Auto-stop timer when 100% complete
+                  if (
+                    progressPercentage >= 100 &&
+                    updatedTimers[goalId].isRunning
+                  ) {
+                    updatedTimers[goalId] = {
+                      ...updatedTimers[goalId],
+                      isRunning: false,
+                      elapsedTime: totalElapsedMs, // Store elapsed time in milliseconds
+                    };
+                    addToast(`Goal "${goal.title}" completed!`, 'success');
+                  } else {
+                    updatedTimers[goalId] = {
+                      ...updatedTimers[goalId],
+                      elapsedTime: totalElapsedMs, // Store elapsed time in milliseconds
+                    };
+                  }
+
+                  return {
+                    ...goal,
+                    progress: Math.round(progressPercentage),
+                    timeSpent: totalElapsedMs, // Store time spent in milliseconds
+                    status:
+                      progressPercentage >= 100
+                        ? 'completed'
+                        : progressPercentage > 0
+                        ? 'in-progress'
+                        : 'active',
+                  };
+                }
+                return goal;
+              })
+            );
+          }
+        });
+
+        return hasActiveTimers ? updatedTimers : prevTimers;
+      });
+    }, 1000); // Update every second
+
+    return () => clearInterval(interval);
+  }, [setTasks, setGoals]);
+
+  // Timer functions
+  const startTimer = (taskId) => {
+    setActiveTimers((prev) => {
+      const existingTimer = prev[taskId];
+      const previousElapsed = existingTimer?.elapsedTime || 0;
+
+      return {
+        ...prev,
+        [taskId]: {
+          startTime: Date.now(),
+          elapsedTime: previousElapsed, // Keep previous elapsed time
+          isRunning: true,
+        },
+      };
+    });
+    addToast('Timer started!', 'success');
+  };
+
+  const pauseTimer = (taskId) => {
+    setActiveTimers((prev) => {
+      const timer = prev[taskId];
+      if (!timer || !timer.isRunning) return prev;
+
+      // Calculate the time elapsed during this session
+      const sessionElapsed = (Date.now() - timer.startTime) / 1000 / 3600;
+      const totalElapsed = timer.elapsedTime + sessionElapsed;
+
+      return {
+        ...prev,
+        [taskId]: {
+          ...timer,
+          elapsedTime: totalElapsed,
+          isRunning: false,
+        },
+      };
+    });
+    addToast('Timer paused', 'info');
+  };
+
+  const stopTimer = (taskId) => {
+    setActiveTimers((prev) => {
+      const newTimers = { ...prev };
+      delete newTimers[taskId];
+      return newTimers;
+    });
+    addToast('Timer stopped', 'info');
+  };
+
+  // Goal timer functions
+  const startGoalTimer = (goalId) => {
+    setActiveGoalTimers((prev) => {
+      const existingTimer = prev[goalId];
+      const previousElapsed = existingTimer?.elapsedTime || 0;
+
+      return {
+        ...prev,
+        [goalId]: {
+          startTime: Date.now(),
+          elapsedTime: previousElapsed, // Keep previous elapsed time
+          isRunning: true,
+        },
+      };
+    });
+    addToast('Goal timer started!', 'success');
+  };
+
+  const pauseGoalTimer = (goalId) => {
+    setActiveGoalTimers((prev) => {
+      const timer = prev[goalId];
+      if (!timer || !timer.isRunning) return prev;
+
+      // Calculate the time elapsed during this session
+      const sessionElapsed = (Date.now() - timer.startTime) / 1000 / 3600;
+      const totalElapsed = timer.elapsedTime + sessionElapsed;
+
+      return {
+        ...prev,
+        [goalId]: {
+          ...timer,
+          elapsedTime: totalElapsed,
+          isRunning: false,
+        },
+      };
+    });
+    addToast('Goal timer paused', 'info');
+  };
+
+  const stopGoalTimer = (goalId) => {
+    setActiveGoalTimers((prev) => {
+      const newTimers = { ...prev };
+      delete newTimers[goalId];
+      return newTimers;
+    });
+    addToast('Goal timer stopped', 'info');
+  };
+
+  // Format elapsed time from milliseconds to human readable format
+  const formatElapsedTimeFromMs = (milliseconds) => {
+    if (!milliseconds) return '0s';
+    const totalSeconds = Math.round(milliseconds / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const remainingSeconds = totalSeconds % 60;
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${remainingSeconds}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${remainingSeconds}s`;
+    }
+    return `${remainingSeconds}s`;
+  };
+
+  // Format elapsed time from seconds to human readable format
+  const formatElapsedTimeFromSeconds = (seconds) => {
+    if (!seconds) return '0s';
+    const totalSeconds = Math.round(seconds);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const remainingSeconds = totalSeconds % 60;
+
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${remainingSeconds}s`;
+    } else if (minutes > 0) {
+      return `${minutes}m ${remainingSeconds}s`;
+    }
+    return `${remainingSeconds}s`;
+  };
+
+  // Format estimated time from minutes to human readable format
+  const formatEstimatedTime = (minutes) => {
+    if (!minutes) return '0m';
+    const totalMinutes = Math.round(minutes);
+    const hrs = Math.floor(totalMinutes / 60);
+    const mins = totalMinutes % 60;
+
+    if (hrs > 0) {
+      return `${hrs}h ${mins}m`;
+    }
+    return `${mins}m`;
+  };
+
+  const formatElapsedTime = (hours) => {
+    if (!hours) return '0m';
+    const totalMinutes = Math.round(hours * 60);
+    const hrs = Math.floor(totalMinutes / 60);
+    const mins = totalMinutes % 60;
+
+    if (hrs > 0) {
+      return `${hrs}h ${mins}m`;
+    }
+    return `${mins}m`;
+  };
 
   // Global functions (same as original)
   const switchTab = (tabName) => {
@@ -174,6 +677,7 @@ function App() {
         description: '',
         targetDate: '',
         category: 'academic',
+        estimatedTime: '',
       });
     }
   };
@@ -231,15 +735,6 @@ function App() {
     setCurrentCalendarDate(
       new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
     );
-
-    const tasksForDate = getTasksForDate(selectedDate);
-    if (tasksForDate.length > 0) {
-      console.log(
-        `${
-          tasksForDate.length
-        } task(s) found on ${selectedDate.toLocaleDateString()}`
-      );
-    }
   };
 
   const renderCalendar = () => {
@@ -313,7 +808,9 @@ function App() {
         priority: task.priority,
         category: task.category,
         dueDate: task.dueDate ? task.dueDate.toISOString().split('T')[0] : '',
-        estimatedTime: task.estimatedTime || '',
+        estimatedTime: task.estimatedTime
+          ? Math.round(hoursToMinutes(task.estimatedTime)).toString()
+          : '', // Convert hours back to minutes
       });
       setShowEditTaskModal(true);
     }
@@ -342,7 +839,7 @@ function App() {
 
   // Goal management functions
   const editGoal = (goalId) => {
-    console.log(`Edit goal: ${goalId}`);
+    // Implementation for editing goals
   };
 
   const deleteGoal = (goalId) => {
@@ -369,6 +866,7 @@ function App() {
   // Form submission functions
   const handleAddTask = (e) => {
     e.preventDefault();
+
     if (!taskForm.title.trim()) {
       addToast('Please enter a task title', 'error');
       return;
@@ -381,15 +879,20 @@ function App() {
       priority: taskForm.priority,
       category: taskForm.category,
       dueDate: taskForm.dueDate ? new Date(taskForm.dueDate) : null,
-      estimatedTime: parseFloat(taskForm.estimatedTime) || 0,
+      estimatedTime: parseFloat(taskForm.estimatedTime) || 30, // Default to 30 minutes if no time provided
       status: 'pending',
       progress: 0,
       createdAt: new Date(),
       completedAt: null,
+      timeSpent: 0,
     };
 
+    // Update state - this will trigger localStorage save via useEffect
     setTasks((prevTasks) => [...prevTasks, newTask]);
+
+    // Task added successfully - timer must be started manually
     addToast(`Task "${newTask.title}" added successfully!`, 'success');
+
     closeModal('add-task-modal');
   };
 
@@ -412,7 +915,7 @@ function App() {
       priority: taskForm.priority,
       category: taskForm.category,
       dueDate: taskForm.dueDate ? new Date(taskForm.dueDate) : null,
-      estimatedTime: parseFloat(taskForm.estimatedTime) || 0,
+      estimatedTime: minutesToHours(parseFloat(taskForm.estimatedTime) || 0), // Convert minutes to hours
     };
 
     setTasks((prevTasks) =>
@@ -424,6 +927,7 @@ function App() {
 
   const handleAddGoal = (e) => {
     e.preventDefault();
+
     if (!goalForm.title.trim()) {
       addToast('Please enter a goal title', 'error');
       return;
@@ -435,13 +939,19 @@ function App() {
       description: goalForm.description.trim(),
       category: goalForm.category,
       targetDate: goalForm.targetDate ? new Date(goalForm.targetDate) : null,
+      estimatedTime: parseFloat(goalForm.estimatedTime) || 60, // Default to 60 minutes if no time provided
       status: 'active',
       progress: 0,
+      timeSpent: 0,
       createdAt: new Date(),
     };
 
+    // Update state - this will trigger localStorage save via useEffect
     setGoals((prevGoals) => [...prevGoals, newGoal]);
+
+    // Goal added successfully - timer must be started manually
     addToast(`Goal "${newGoal.title}" added successfully!`, 'success');
+
     closeModal('add-goal-modal');
   };
 
@@ -649,7 +1159,11 @@ function App() {
                       className={`task-item ${task.status} ${task.priority}-priority`}
                     >
                       <div className="task-header">
-                        <span className="task-title">{task.title}</span>
+                        <span className="task-title">
+                          {task.title && task.title.trim()
+                            ? task.title
+                            : 'Untitled Task'}
+                        </span>
                         <div className="task-actions">
                           <button
                             className="task-action-btn"
@@ -677,8 +1191,144 @@ function App() {
                         <div className="task-tags">
                           <span className="task-tag">{task.category}</span>
                           <span className="task-tag">{task.priority}</span>
+                          {task.estimatedTime && task.estimatedTime > 0 && (
+                            <span className="task-tag estimated-time">
+                              {formatEstimatedTime(task.estimatedTime)}
+                            </span>
+                          )}
+                          {activeTimers[task.id] && (
+                            <span className="task-tag timer-display">
+                              ⏱️{' '}
+                              {formatElapsedTimeFromMs(
+                                activeTimers[task.id].elapsedTime
+                              )}
+                            </span>
+                          )}
                         </div>
                       </div>
+
+                      {/* Timer Controls */}
+                      {task.estimatedTime && task.estimatedTime > 0 && (
+                        <div className="timer-controls">
+                          {!activeTimers[task.id]?.isRunning ? (
+                            <button
+                              className="timer-btn start-timer"
+                              onClick={() => startTimer(task.id)}
+                              title="Start Timer"
+                            >
+                              <i className="fas fa-play"></i> Start Timer
+                            </button>
+                          ) : (
+                            <>
+                              <button
+                                className="timer-btn pause-timer"
+                                onClick={() => pauseTimer(task.id)}
+                                title="Pause Timer"
+                              >
+                                <i className="fas fa-pause"></i> Pause
+                              </button>
+                              <button
+                                className="timer-btn stop-timer"
+                                onClick={() => stopTimer(task.id)}
+                                title="Stop Timer"
+                              >
+                                <i className="fas fa-stop"></i> Stop
+                              </button>
+                            </>
+                          )}
+                          {task.timeSpent > 0 && (
+                            <span className="time-spent">
+                              Total: {formatElapsedTimeFromMs(task.timeSpent)}
+                            </span>
+                          )}
+
+                          {/* Progress bar for tasks */}
+                          <div
+                            className="timer-progress"
+                            style={{ marginTop: '8px' }}
+                          >
+                            {(() => {
+                              const currentTimeMs =
+                                activeTimers[task.id]?.elapsedTime ||
+                                task.timeSpent ||
+                                0;
+                              const totalTimeMs =
+                                task.estimatedTime * 60 * 1000; // EXACT: minutes * 60 * 1000
+                              const rawProgressPercentage =
+                                (currentTimeMs / totalTimeMs) * 100;
+                              const progressPercentage = Math.min(
+                                Math.max(rawProgressPercentage, 0),
+                                100
+                              ); // Clamp [0,100]
+                              const isOvertime = rawProgressPercentage > 100;
+
+                              // Calculate remaining time
+                              const remainingMs = Math.max(
+                                0,
+                                totalTimeMs - currentTimeMs
+                              );
+                              const remainingMin = Math.floor(
+                                remainingMs / 60000
+                              );
+                              const remainingSec = Math.floor(
+                                (remainingMs % 60000) / 1000
+                              );
+
+                              // Debug render progress
+                              console.log(
+                                `🖥️ UI RENDER DEBUG for Task "${task.title}":`,
+                                {
+                                  currentTimeMs,
+                                  taskEstimatedMinutes: task.estimatedTime,
+                                  totalTimeMs,
+                                  rawProgressPercentage,
+                                  progressPercentage,
+                                  remainingMs,
+                                  remainingTime: `${remainingMin}m ${remainingSec}s`,
+                                  isOvertime,
+                                  formula: `${currentTimeMs}ms / ${totalTimeMs}ms * 100 = ${rawProgressPercentage.toFixed(
+                                    2
+                                  )}%`,
+                                }
+                              );
+
+                              return (
+                                <div style={{ position: 'relative' }}>
+                                  <div
+                                    className={`timer-progress-bar ${
+                                      isOvertime ? 'overtime' : ''
+                                    }`}
+                                    style={{
+                                      width: `${progressPercentage}%`,
+                                      background: isOvertime
+                                        ? 'linear-gradient(90deg, #ff5722, #d32f2f)'
+                                        : 'linear-gradient(90deg, var(--success-color), var(--warning-color), var(--error-color))',
+                                    }}
+                                  ></div>
+                                  {isOvertime && (
+                                    <div
+                                      style={{
+                                        position: 'absolute',
+                                        right: '-5px',
+                                        top: '50%',
+                                        transform: 'translateY(-50%)',
+                                        background: '#ff5722',
+                                        color: 'white',
+                                        padding: '2px 6px',
+                                        borderRadius: '3px',
+                                        fontSize: '10px',
+                                        fontWeight: 'bold',
+                                      }}
+                                    >
+                                      {Math.round(progressPercentage)}%
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))
                 )}
@@ -746,7 +1396,11 @@ function App() {
                     className={`task-item ${task.status} ${task.priority}-priority`}
                   >
                     <div className="task-header">
-                      <span className="task-title">{task.title}</span>
+                      <span className="task-title">
+                        {task.title && task.title.trim()
+                          ? task.title
+                          : 'Untitled Task'}
+                      </span>
                       <div className="task-actions">
                         <button
                           className="task-action-btn"
@@ -816,8 +1470,58 @@ function App() {
                       <div className="task-tags">
                         <span className="task-tag">{task.category}</span>
                         <span className="task-tag">{task.priority}</span>
+                        {task.estimatedTime && task.estimatedTime > 0 && (
+                          <span className="task-tag estimated-time">
+                            {formatEstimatedTime(task.estimatedTime)}
+                          </span>
+                        )}
+                        {activeTimers[task.id] && (
+                          <span className="task-tag timer-display">
+                            ⏱️{' '}
+                            {formatElapsedTimeFromMs(
+                              activeTimers[task.id].elapsedTime
+                            )}
+                          </span>
+                        )}
                       </div>
                     </div>
+
+                    {/* Timer Controls */}
+                    {task.estimatedTime && task.estimatedTime > 0 && (
+                      <div className="timer-controls">
+                        {!activeTimers[task.id]?.isRunning ? (
+                          <button
+                            className="timer-btn start-timer"
+                            onClick={() => startTimer(task.id)}
+                            title="Start Timer"
+                          >
+                            <i className="fas fa-play"></i> Start Timer
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              className="timer-btn pause-timer"
+                              onClick={() => pauseTimer(task.id)}
+                              title="Pause Timer"
+                            >
+                              <i className="fas fa-pause"></i> Pause
+                            </button>
+                            <button
+                              className="timer-btn stop-timer"
+                              onClick={() => stopTimer(task.id)}
+                              title="Stop Timer"
+                            >
+                              <i className="fas fa-stop"></i> Stop
+                            </button>
+                          </>
+                        )}
+                        {task.timeSpent > 0 && (
+                          <span className="time-spent">
+                            Total: {formatElapsedTimeFromMs(task.timeSpent)}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))
               )}
@@ -957,62 +1661,215 @@ function App() {
                   No goals set yet. Create your first goal!
                 </p>
               ) : (
-                goals.map((goal) => (
-                  <div key={goal.id} className="goal-item">
-                    <div className="goal-header">
-                      <span className="goal-title">{goal.title}</span>
-                      <div className="task-actions">
-                        <button
-                          className="task-action-btn"
-                          onClick={() => editGoal(goal.id)}
-                          title="Edit goal"
-                        >
-                          <i className="fas fa-edit"></i>
-                        </button>
-                        <button
-                          className="task-action-btn"
-                          onClick={() => deleteGoal(goal.id)}
-                          title="Delete goal"
-                        >
-                          <i className="fas fa-trash"></i>
-                        </button>
-                      </div>
-                    </div>
-                    {goal.description && (
-                      <div className="goal-description">{goal.description}</div>
-                    )}
-                    <div className="goal-progress">
-                      <div className="progress-bar">
-                        <div
-                          className="progress-fill"
-                          style={{ width: `${goal.progress || 0}%` }}
-                        ></div>
-                      </div>
-                      <div
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          marginTop: '0.5rem',
-                        }}
-                      >
-                        <span className="progress-text">
-                          {goal.progress || 0}% Complete
+                goals.map((goal) => {
+                  return (
+                    <div key={goal.id} className="goal-item">
+                      <div className="goal-header">
+                        <span className="goal-title">
+                          {goal.title || 'Untitled Goal'}
                         </span>
-                        <input
-                          type="range"
-                          min="0"
-                          max="100"
-                          value={goal.progress || 0}
-                          onChange={(e) =>
-                            updateGoalProgress(goal.id, e.target.value)
-                          }
-                          style={{ width: '100px' }}
-                        />
+                        <div className="task-actions">
+                          <button
+                            className="task-action-btn"
+                            onClick={() => editGoal(goal.id)}
+                            title="Edit goal"
+                          >
+                            <i className="fas fa-edit"></i>
+                          </button>
+                          <button
+                            className="task-action-btn"
+                            onClick={() => deleteGoal(goal.id)}
+                            title="Delete goal"
+                          >
+                            <i className="fas fa-trash"></i>
+                          </button>
+                        </div>
+                      </div>
+                      {goal.description && (
+                        <div className="goal-description">
+                          {goal.description}
+                        </div>
+                      )}
+
+                      {/* Timer section for goals */}
+                      {goal.estimatedTime > 0 && (
+                        <div className="timer-section">
+                          <div className="timer-info">
+                            <div className="time-display">
+                              <span className="time-label">Time Spent:</span>
+                              <span className="time-value">
+                                {formatElapsedTimeFromMs(
+                                  activeGoalTimers[goal.id]?.elapsedTime ||
+                                    goal.timeSpent ||
+                                    0
+                                )}
+                              </span>
+                            </div>
+                            <div className="time-display">
+                              <span className="time-label">Estimated:</span>
+                              <span className="time-value">
+                                {formatEstimatedTime(goal.estimatedTime)}
+                              </span>
+                            </div>
+                            <div className="timer-progress">
+                              {(() => {
+                                const currentTimeMs =
+                                  activeGoalTimers[goal.id]?.elapsedTime ||
+                                  goal.timeSpent ||
+                                  0;
+                                const totalTimeMs =
+                                  goal.estimatedTime * 60 * 1000; // EXACT: minutes * 60 * 1000
+                                const rawProgressPercentage =
+                                  (currentTimeMs / totalTimeMs) * 100;
+                                const progressPercentage = Math.min(
+                                  Math.max(rawProgressPercentage, 0),
+                                  100
+                                ); // Clamp [0,100]
+                                const isOvertime = rawProgressPercentage > 100;
+
+                                // Calculate remaining time
+                                const remainingMs = Math.max(
+                                  0,
+                                  totalTimeMs - currentTimeMs
+                                );
+                                const remainingMin = Math.floor(
+                                  remainingMs / 60000
+                                );
+                                const remainingSec = Math.floor(
+                                  (remainingMs % 60000) / 1000
+                                );
+
+                                // Debug render progress
+                                console.log(
+                                  `🖥️ UI RENDER DEBUG for Goal "${goal.title}":`,
+                                  {
+                                    currentTimeMs,
+                                    goalEstimatedMinutes: goal.estimatedTime,
+                                    totalTimeMs,
+                                    rawProgressPercentage,
+                                    progressPercentage,
+                                    remainingMs,
+                                    remainingTime: `${remainingMin}m ${remainingSec}s`,
+                                    isOvertime,
+                                    formula: `${currentTimeMs}ms / ${totalTimeMs}ms * 100 = ${rawProgressPercentage.toFixed(
+                                      2
+                                    )}%`,
+                                  }
+                                );
+
+                                return (
+                                  <>
+                                    <div
+                                      className={`timer-progress-bar ${
+                                        isOvertime ? 'overtime' : ''
+                                      }`}
+                                      style={{
+                                        width: `${Math.min(
+                                          progressPercentage,
+                                          100
+                                        )}%`,
+                                        background: isOvertime
+                                          ? 'linear-gradient(90deg, #ff5722, #d32f2f)'
+                                          : 'linear-gradient(90deg, var(--success-color), var(--warning-color), var(--error-color))',
+                                      }}
+                                    ></div>
+                                    {isOvertime && (
+                                      <div
+                                        className="overtime-indicator"
+                                        style={{
+                                          position: 'absolute',
+                                          right: '-5px',
+                                          top: '50%',
+                                          transform: 'translateY(-50%)',
+                                          background: '#ff5722',
+                                          color: 'white',
+                                          padding: '2px 6px',
+                                          borderRadius: '3px',
+                                          fontSize: '10px',
+                                          fontWeight: 'bold',
+                                        }}
+                                      >
+                                        {Math.round(progressPercentage)}%
+                                      </div>
+                                    )}
+                                  </>
+                                );
+                              })()}
+                            </div>
+                          </div>
+                          <div className="timer-controls">
+                            {!activeGoalTimers[goal.id]?.isRunning ? (
+                              <button
+                                className="timer-btn start-timer"
+                                onClick={() => startGoalTimer(goal.id)}
+                                title="Start Timer"
+                              >
+                                <i className="fas fa-play"></i>
+                                <span>Start</span>
+                              </button>
+                            ) : (
+                              <>
+                                <button
+                                  className="timer-btn pause-timer"
+                                  onClick={() => pauseGoalTimer(goal.id)}
+                                  title="Pause Timer"
+                                >
+                                  <i className="fas fa-pause"></i>
+                                  <span>Pause</span>
+                                </button>
+                                <button
+                                  className="timer-btn stop-timer"
+                                  onClick={() => stopGoalTimer(goal.id)}
+                                  title="Stop Timer"
+                                >
+                                  <i className="fas fa-stop"></i>
+                                  <span>Stop</span>
+                                </button>
+                              </>
+                            )}
+                          </div>
+                          {activeGoalTimers[goal.id]?.isRunning && (
+                            <div className="timer-indicator">
+                              <div className="timer-pulse"></div>
+                              <span>Timer Running</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="goal-progress">
+                        <div className="progress-bar">
+                          <div
+                            className="progress-fill"
+                            style={{ width: `${goal.progress || 0}%` }}
+                          ></div>
+                        </div>
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginTop: '0.5rem',
+                          }}
+                        >
+                          <span className="progress-text">
+                            {goal.progress || 0}% Complete
+                          </span>
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={goal.progress || 0}
+                            onChange={(e) =>
+                              updateGoalProgress(goal.id, e.target.value)
+                            }
+                            style={{ width: '100px' }}
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
@@ -1217,13 +2074,14 @@ function App() {
                   </div>
                   <div className="form-group">
                     <label htmlFor="task-estimated-time">
-                      Estimated Time (hours)
+                      Estimated Time (minutes)
                     </label>
                     <input
                       type="number"
                       id="task-estimated-time"
-                      min="0.5"
-                      step="0.5"
+                      min="5"
+                      step="5"
+                      placeholder="Enter minutes (e.g., 30, 60, 120)"
                       value={taskForm.estimatedTime}
                       onChange={(e) =>
                         handleTaskFormChange('estimatedTime', e.target.value)
@@ -1350,13 +2208,14 @@ function App() {
                   </div>
                   <div className="form-group">
                     <label htmlFor="edit-task-estimated-time">
-                      Estimated Time (hours)
+                      Estimated Time (minutes)
                     </label>
                     <input
                       type="number"
                       id="edit-task-estimated-time"
-                      min="0.5"
-                      step="0.5"
+                      min="5"
+                      step="5"
+                      placeholder="Enter minutes (e.g., 30, 60, 120)"
                       value={taskForm.estimatedTime}
                       onChange={(e) =>
                         handleTaskFormChange('estimatedTime', e.target.value)
@@ -1463,6 +2322,22 @@ function App() {
                       <option value="exam">Exam Preparation</option>
                       <option value="other">Other</option>
                     </select>
+                  </div>
+                  <div className="form-group">
+                    <label htmlFor="goal-estimated-time">
+                      Estimated Time (minutes)
+                    </label>
+                    <input
+                      type="number"
+                      id="goal-estimated-time"
+                      value={goalForm.estimatedTime}
+                      onChange={(e) =>
+                        handleGoalFormChange('estimatedTime', e.target.value)
+                      }
+                      min="5"
+                      step="5"
+                      placeholder="Enter minutes (e.g., 30, 60, 120)"
+                    />
                   </div>
                 </div>
                 <div className="form-actions">

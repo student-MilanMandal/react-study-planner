@@ -1031,6 +1031,179 @@ body {
   font-size: 0.8rem;
 }
 
+.task-tag.estimated-time {
+  background: rgba(76, 175, 80, 0.1);
+  color: #4caf50;
+  font-weight: 600;
+  border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+/* Dark mode styling for estimated time tag */
+[data-theme='dark'] .task-tag.estimated-time {
+  background: rgba(76, 175, 80, 0.2);
+  color: #81c784;
+  border: 1px solid rgba(76, 175, 80, 0.4);
+}
+
+/* Timer display tag styling */
+.task-tag.timer-display {
+  background: rgba(255, 152, 0, 0.1);
+  color: #ff9800;
+  font-weight: 600;
+  border: 1px solid rgba(255, 152, 0, 0.3);
+  animation: pulse 2s infinite;
+}
+
+[data-theme='dark'] .task-tag.timer-display {
+  background: rgba(255, 152, 0, 0.2);
+  color: #ffb74d;
+  border: 1px solid rgba(255, 152, 0, 0.4);
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Timer Controls */
+.timer-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.timer-btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.timer-btn.start-timer {
+  background: #4caf50;
+  color: white;
+}
+
+.timer-btn.start-timer:hover {
+  background: #45a049;
+  transform: translateY(-1px);
+}
+
+.timer-btn.pause-timer {
+  background: #ff9800;
+  color: white;
+}
+
+.timer-btn.pause-timer:hover {
+  background: #f57c00;
+  transform: translateY(-1px);
+}
+
+.timer-btn.stop-timer {
+  background: #f44336;
+  color: white;
+}
+
+.timer-btn.stop-timer:hover {
+  background: #d32f2f;
+  transform: translateY(-1px);
+}
+
+.time-spent {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-left: auto;
+}
+
+/* Timer Section Styles */
+.timer-section {
+  margin: 1rem 0;
+  padding: 1rem;
+  background: var(--bg-secondary);
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+}
+
+.timer-info {
+  margin-bottom: 1rem;
+}
+
+.time-display {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.time-label {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.time-value {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.timer-progress {
+  position: relative;
+  height: 6px;
+  background: var(--border-color);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 0.5rem;
+}
+
+.timer-progress-bar {
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    var(--success-color) 0%,
+    var(--warning-color) 70%,
+    var(--error-color) 100%
+  );
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.timer-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--success-color);
+  font-weight: 600;
+}
+
+.timer-pulse {
+  width: 8px;
+  height: 8px;
+  background: var(--success-color);
+  border-radius: 50%;
+  animation: pulse 1.5s infinite;
+}
+
 .task-due-date {
   font-size: 0.9rem;
   color: #666;
@@ -2269,6 +2442,34 @@ body:not([data-theme='dark']) .form-group label {
   font-size: 16px !important;
 }
 
+/* Specific styling for number inputs to ensure they work properly */
+[data-theme='dark'] .form-group input[type='number'] {
+  -webkit-appearance: auto;
+  -moz-appearance: auto;
+  appearance: auto;
+  background: #ffffff !important;
+  color: #1f2937 !important;
+  border: 2px solid #4b5563 !important;
+  -webkit-text-fill-color: #1f2937 !important;
+  padding-right: 25px; /* Make room for spinner buttons */
+}
+
+/* Number input spinner buttons - RESTORED for better UX */
+[data-theme='dark'] .form-group input[type='number']::-webkit-outer-spin-button,
+[data-theme='dark']
+  .form-group
+  input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: auto;
+  opacity: 1;
+  height: 20px;
+  cursor: pointer;
+}
+
+[data-theme='dark'] .form-group input[type='number'] {
+  -moz-appearance: auto;
+  appearance: auto;
+}
+
 /* Dark mode input focus states */
 [data-theme='dark'] .form-group input:focus,
 [data-theme='dark'] .form-group select:focus,
@@ -2312,6 +2513,38 @@ body:not([data-theme='dark']) .form-group textarea {
   color: #2d3748 !important;
   border-color: #e2e8f0 !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* Specific styling for number inputs in light mode */
+[data-theme='light'] .form-group input[type='number'],
+body:not([data-theme='dark']) .form-group input[type='number'] {
+  -webkit-appearance: auto;
+  -moz-appearance: auto;
+  appearance: auto;
+  background: #ffffff !important;
+  color: #2d3748 !important;
+  border: 2px solid #e2e8f0 !important;
+  -webkit-text-fill-color: #2d3748 !important;
+  padding-right: 25px; /* Make room for spinner buttons */
+}
+
+/* Number input spinner buttons for light mode - RESTORED */
+[data-theme='light']
+  .form-group
+  input[type='number']::-webkit-outer-spin-button,
+[data-theme='light']
+  .form-group
+  input[type='number']::-webkit-inner-spin-button,
+body:not([data-theme='dark'])
+  .form-group
+  input[type='number']::-webkit-outer-spin-button,
+body:not([data-theme='dark'])
+  .form-group
+  input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: auto;
+  opacity: 1;
+  height: 20px;
+  cursor: pointer;
 }
 
 .form-group input::placeholder,
@@ -3050,6 +3283,43 @@ body:not([data-theme='dark']) .form-group textarea:focus {
     gap: 0.75rem;
   }
 
+  /* Mobile timer controls styling */
+  .timer-controls {
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.5rem;
+  }
+
+  .timer-btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.75rem;
+    min-height: 36px;
+  }
+
+  .time-spent {
+    margin-left: 0;
+    text-align: center;
+  }
+
+  /* Mobile timer section styling for goals and tasks */
+  .timer-section {
+    padding: 0.75rem;
+    margin: 0.75rem 0;
+  }
+
+  .time-display {
+    font-size: 0.8rem;
+  }
+
+  .timer-indicator {
+    font-size: 0.75rem;
+    justify-content: center;
+  }
+
+  .timer-progress {
+    height: 4px;
+  }
+
   .calendar-header {
     flex-direction: column;
     gap: 1rem;
@@ -3128,6 +3398,26 @@ body:not([data-theme='dark']) .form-group textarea:focus {
   .form-group textarea {
     font-size: 16px; /* Prevents zoom on iOS */
     padding: 0.75rem;
+  }
+
+  /* Mobile optimizations for number inputs */
+  .form-group input[type='number'] {
+    -webkit-appearance: auto;
+    -moz-appearance: auto;
+    appearance: auto;
+    font-size: 16px !important; /* Prevent zoom on mobile */
+    -webkit-text-fill-color: inherit !important;
+    caret-color: var(--primary-color) !important;
+    min-height: 48px; /* Better touch target */
+  }
+
+  .form-group input[type='number']::-webkit-outer-spin-button,
+  .form-group input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: auto;
+    opacity: 1;
+    height: 18px;
+    cursor: pointer;
+    margin: 0;
   }
 }
 
