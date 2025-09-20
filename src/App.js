@@ -270,9 +270,10 @@ function App() {
             // Update task progress based on time spent vs estimated time
             setTasks((prevTasks) =>
               prevTasks.map((task) => {
-                if (task.id === taskId && task.estimatedTime > 0) {
-                  // Convert task duration from minutes to milliseconds: totalTimeMs = minutes * 60 * 1000
-                  const taskEstimatedMinutes = task.estimatedTime; // Now stored in minutes
+                if (task.id === taskId) {
+                  // Use provided time or default to 30 minutes for timer calculations
+                  const taskEstimatedMinutes =
+                    task.estimatedTime > 0 ? task.estimatedTime : 30;
                   const totalTimeMs = taskEstimatedMinutes * 60 * 1000; // EXACT FORMULA: minutes * 60 * 1000
                   const elapsedMs = totalElapsedMs; // elapsedMs = Date.now() - startTime
                   const rawProgressPercentage = (elapsedMs / totalTimeMs) * 100; // progress = (elapsedMs / totalTimeMs) * 100
@@ -400,9 +401,10 @@ function App() {
             // Update goal progress based on time spent vs estimated time
             setGoals((prevGoals) =>
               prevGoals.map((goal) => {
-                if (goal.id === goalId && goal.estimatedTime > 0) {
-                  // Convert goal duration from minutes to milliseconds: totalTimeMs = minutes * 60 * 1000
-                  const goalEstimatedMinutes = goal.estimatedTime; // Now stored in minutes
+                if (goal.id === goalId) {
+                  // Use provided time or default to 60 minutes for timer calculations
+                  const goalEstimatedMinutes =
+                    goal.estimatedTime > 0 ? goal.estimatedTime : 60;
                   const totalTimeMs = goalEstimatedMinutes * 60 * 1000; // EXACT FORMULA: minutes * 60 * 1000
                   const elapsedMs = totalElapsedMs; // elapsedMs = Date.now() - startTime
                   const rawProgressPercentage = (elapsedMs / totalTimeMs) * 100; // progress = (elapsedMs / totalTimeMs) * 100
@@ -879,7 +881,10 @@ function App() {
       priority: taskForm.priority,
       category: taskForm.category,
       dueDate: taskForm.dueDate ? new Date(taskForm.dueDate) : null,
-      estimatedTime: parseFloat(taskForm.estimatedTime) || 30, // Default to 30 minutes if no time provided
+      estimatedTime: parseFloat(taskForm.estimatedTime) || 0, // Store 0 if no time provided
+      userProvidedTime: Boolean(
+        taskForm.estimatedTime && parseFloat(taskForm.estimatedTime) > 0
+      ), // Track if user provided time
       status: 'pending',
       progress: 0,
       createdAt: new Date(),
@@ -939,7 +944,10 @@ function App() {
       description: goalForm.description.trim(),
       category: goalForm.category,
       targetDate: goalForm.targetDate ? new Date(goalForm.targetDate) : null,
-      estimatedTime: parseFloat(goalForm.estimatedTime) || 60, // Default to 60 minutes if no time provided
+      estimatedTime: parseFloat(goalForm.estimatedTime) || 0, // Store 0 if no time provided
+      userProvidedTime: Boolean(
+        goalForm.estimatedTime && parseFloat(goalForm.estimatedTime) > 0
+      ), // Track if user provided time
       status: 'active',
       progress: 0,
       timeSpent: 0,
@@ -1191,7 +1199,7 @@ function App() {
                         <div className="task-tags">
                           <span className="task-tag">{task.category}</span>
                           <span className="task-tag">{task.priority}</span>
-                          {task.estimatedTime && task.estimatedTime > 0 && (
+                          {task.userProvidedTime && task.estimatedTime > 0 && (
                             <span className="task-tag estimated-time">
                               {formatEstimatedTime(task.estimatedTime)}
                             </span>
@@ -1208,127 +1216,129 @@ function App() {
                       </div>
 
                       {/* Timer Controls */}
-                      {task.estimatedTime && task.estimatedTime > 0 && (
-                        <div className="timer-controls">
-                          {!activeTimers[task.id]?.isRunning ? (
-                            <button
-                              className="timer-btn start-timer"
-                              onClick={() => startTimer(task.id)}
-                              title="Start Timer"
-                            >
-                              <i className="fas fa-play"></i> Start Timer
-                            </button>
-                          ) : (
-                            <>
-                              <button
-                                className="timer-btn pause-timer"
-                                onClick={() => pauseTimer(task.id)}
-                                title="Pause Timer"
-                              >
-                                <i className="fas fa-pause"></i> Pause
-                              </button>
-                              <button
-                                className="timer-btn stop-timer"
-                                onClick={() => stopTimer(task.id)}
-                                title="Stop Timer"
-                              >
-                                <i className="fas fa-stop"></i> Stop
-                              </button>
-                            </>
-                          )}
-                          {task.timeSpent > 0 && (
-                            <span className="time-spent">
-                              Total: {formatElapsedTimeFromMs(task.timeSpent)}
-                            </span>
-                          )}
-
-                          {/* Progress bar for tasks */}
-                          <div
-                            className="timer-progress"
-                            style={{ marginTop: '8px' }}
+                      <div className="timer-controls">
+                        {!activeTimers[task.id]?.isRunning ? (
+                          <button
+                            className="timer-btn start-timer"
+                            onClick={() => startTimer(task.id)}
+                            title="Start Timer"
                           >
-                            {(() => {
-                              const currentTimeMs =
-                                activeTimers[task.id]?.elapsedTime ||
-                                task.timeSpent ||
-                                0;
-                              const totalTimeMs =
-                                task.estimatedTime * 60 * 1000; // EXACT: minutes * 60 * 1000
-                              const rawProgressPercentage =
-                                (currentTimeMs / totalTimeMs) * 100;
-                              const progressPercentage = Math.min(
-                                Math.max(rawProgressPercentage, 0),
-                                100
-                              ); // Clamp [0,100]
-                              const isOvertime = rawProgressPercentage > 100;
+                            <i className="fas fa-play"></i> Start Timer
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              className="timer-btn pause-timer"
+                              onClick={() => pauseTimer(task.id)}
+                              title="Pause Timer"
+                            >
+                              <i className="fas fa-pause"></i> Pause
+                            </button>
+                            <button
+                              className="timer-btn stop-timer"
+                              onClick={() => stopTimer(task.id)}
+                              title="Stop Timer"
+                            >
+                              <i className="fas fa-stop"></i> Stop
+                            </button>
+                          </>
+                        )}
+                        {task.timeSpent > 0 && (
+                          <span className="time-spent">
+                            Total: {formatElapsedTimeFromMs(task.timeSpent)}
+                          </span>
+                        )}
 
-                              // Calculate remaining time
-                              const remainingMs = Math.max(
-                                0,
-                                totalTimeMs - currentTimeMs
-                              );
-                              const remainingMin = Math.floor(
-                                remainingMs / 60000
-                              );
-                              const remainingSec = Math.floor(
-                                (remainingMs % 60000) / 1000
-                              );
+                        {/* Progress bar for tasks */}
+                        <div
+                          className="timer-progress"
+                          style={{ marginTop: '8px' }}
+                        >
+                          {(() => {
+                            const currentTimeMs =
+                              activeTimers[task.id]?.elapsedTime ||
+                              task.timeSpent ||
+                              0;
+                            const totalTimeMs =
+                              (task.estimatedTime > 0
+                                ? task.estimatedTime
+                                : 30) *
+                              60 *
+                              1000; // Use default 30 min if no time provided
+                            const rawProgressPercentage =
+                              (currentTimeMs / totalTimeMs) * 100;
+                            const progressPercentage = Math.min(
+                              Math.max(rawProgressPercentage, 0),
+                              100
+                            ); // Clamp [0,100]
+                            const isOvertime = rawProgressPercentage > 100;
 
-                              // Debug render progress
-                              console.log(
-                                `🖥️ UI RENDER DEBUG for Task "${task.title}":`,
-                                {
-                                  currentTimeMs,
-                                  taskEstimatedMinutes: task.estimatedTime,
-                                  totalTimeMs,
-                                  rawProgressPercentage,
-                                  progressPercentage,
-                                  remainingMs,
-                                  remainingTime: `${remainingMin}m ${remainingSec}s`,
-                                  isOvertime,
-                                  formula: `${currentTimeMs}ms / ${totalTimeMs}ms * 100 = ${rawProgressPercentage.toFixed(
-                                    2
-                                  )}%`,
-                                }
-                              );
+                            // Calculate remaining time
+                            const remainingMs = Math.max(
+                              0,
+                              totalTimeMs - currentTimeMs
+                            );
+                            const remainingMin = Math.floor(
+                              remainingMs / 60000
+                            );
+                            const remainingSec = Math.floor(
+                              (remainingMs % 60000) / 1000
+                            );
 
-                              return (
-                                <div style={{ position: 'relative' }}>
+                            // Debug render progress
+                            console.log(
+                              `🖥️ UI RENDER DEBUG for Task "${task.title}":`,
+                              {
+                                currentTimeMs,
+                                taskEstimatedMinutes: task.estimatedTime,
+                                totalTimeMs,
+                                rawProgressPercentage,
+                                progressPercentage,
+                                remainingMs,
+                                remainingTime: `${remainingMin}m ${remainingSec}s`,
+                                isOvertime,
+                                formula: `${currentTimeMs}ms / ${totalTimeMs}ms * 100 = ${rawProgressPercentage.toFixed(
+                                  2
+                                )}%`,
+                              }
+                            );
+
+                            return (
+                              <div style={{ position: 'relative' }}>
+                                <div
+                                  className={`timer-progress-bar ${
+                                    isOvertime ? 'overtime' : ''
+                                  }`}
+                                  style={{
+                                    width: `${progressPercentage}%`,
+                                    background: isOvertime
+                                      ? 'linear-gradient(90deg, #ff5722, #d32f2f)'
+                                      : 'linear-gradient(90deg, var(--success-color), var(--warning-color), var(--error-color))',
+                                  }}
+                                ></div>
+                                {isOvertime && (
                                   <div
-                                    className={`timer-progress-bar ${
-                                      isOvertime ? 'overtime' : ''
-                                    }`}
                                     style={{
-                                      width: `${progressPercentage}%`,
-                                      background: isOvertime
-                                        ? 'linear-gradient(90deg, #ff5722, #d32f2f)'
-                                        : 'linear-gradient(90deg, var(--success-color), var(--warning-color), var(--error-color))',
+                                      position: 'absolute',
+                                      right: '-5px',
+                                      top: '50%',
+                                      transform: 'translateY(-50%)',
+                                      background: '#ff5722',
+                                      color: 'white',
+                                      padding: '2px 6px',
+                                      borderRadius: '3px',
+                                      fontSize: '10px',
+                                      fontWeight: 'bold',
                                     }}
-                                  ></div>
-                                  {isOvertime && (
-                                    <div
-                                      style={{
-                                        position: 'absolute',
-                                        right: '-5px',
-                                        top: '50%',
-                                        transform: 'translateY(-50%)',
-                                        background: '#ff5722',
-                                        color: 'white',
-                                        padding: '2px 6px',
-                                        borderRadius: '3px',
-                                        fontSize: '10px',
-                                        fontWeight: 'bold',
-                                      }}
-                                    >
-                                      {Math.round(progressPercentage)}%
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })()}
-                          </div>
+                                  >
+                                    {Math.round(progressPercentage)}%
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </div>
-                      )}
+                      </div>
                     </div>
                   ))
                 )}
@@ -1470,7 +1480,7 @@ function App() {
                       <div className="task-tags">
                         <span className="task-tag">{task.category}</span>
                         <span className="task-tag">{task.priority}</span>
-                        {task.estimatedTime && task.estimatedTime > 0 && (
+                        {task.userProvidedTime && task.estimatedTime > 0 && (
                           <span className="task-tag estimated-time">
                             {formatEstimatedTime(task.estimatedTime)}
                           </span>
@@ -1487,41 +1497,39 @@ function App() {
                     </div>
 
                     {/* Timer Controls */}
-                    {task.estimatedTime && task.estimatedTime > 0 && (
-                      <div className="timer-controls">
-                        {!activeTimers[task.id]?.isRunning ? (
+                    <div className="timer-controls">
+                      {!activeTimers[task.id]?.isRunning ? (
+                        <button
+                          className="timer-btn start-timer"
+                          onClick={() => startTimer(task.id)}
+                          title="Start Timer"
+                        >
+                          <i className="fas fa-play"></i> Start Timer
+                        </button>
+                      ) : (
+                        <>
                           <button
-                            className="timer-btn start-timer"
-                            onClick={() => startTimer(task.id)}
-                            title="Start Timer"
+                            className="timer-btn pause-timer"
+                            onClick={() => pauseTimer(task.id)}
+                            title="Pause Timer"
                           >
-                            <i className="fas fa-play"></i> Start Timer
+                            <i className="fas fa-pause"></i> Pause
                           </button>
-                        ) : (
-                          <>
-                            <button
-                              className="timer-btn pause-timer"
-                              onClick={() => pauseTimer(task.id)}
-                              title="Pause Timer"
-                            >
-                              <i className="fas fa-pause"></i> Pause
-                            </button>
-                            <button
-                              className="timer-btn stop-timer"
-                              onClick={() => stopTimer(task.id)}
-                              title="Stop Timer"
-                            >
-                              <i className="fas fa-stop"></i> Stop
-                            </button>
-                          </>
-                        )}
-                        {task.timeSpent > 0 && (
-                          <span className="time-spent">
-                            Total: {formatElapsedTimeFromMs(task.timeSpent)}
-                          </span>
-                        )}
-                      </div>
-                    )}
+                          <button
+                            className="timer-btn stop-timer"
+                            onClick={() => stopTimer(task.id)}
+                            title="Stop Timer"
+                          >
+                            <i className="fas fa-stop"></i> Stop
+                          </button>
+                        </>
+                      )}
+                      {task.timeSpent > 0 && (
+                        <span className="time-spent">
+                          Total: {formatElapsedTimeFromMs(task.timeSpent)}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 ))
               )}
