@@ -370,6 +370,7 @@ function App() {
 
   // Timer functions
   // Task Timer functions
+  // Timer functions
   const startTimer = (taskId) => {
     setActiveTimers((prev) => {
       const existingTimer = prev[taskId];
@@ -393,7 +394,7 @@ function App() {
       const timer = prev[taskId];
       if (!timer || !timer.isRunning) return prev;
 
-      // Correctly calculate total milliseconds (Removed the wrong / 1000 / 3600 logic)
+      // Correctly calculate total milliseconds
       const sessionElapsedMs = Date.now() - timer.startTime;
       const totalElapsedMs = (timer.baseElapsedTime || 0) + sessionElapsedMs;
 
