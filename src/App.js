@@ -231,6 +231,7 @@ function App() {
   }, []);
 
   // Timer functionality useEffect
+  // Timer functionality useEffect
   useEffect(() => {
     const interval = setInterval(() => {
       // Update task timers
@@ -242,110 +243,24 @@ function App() {
           if (updatedTimers[taskId].isRunning) {
             hasActiveTimers = true;
             const startTime = updatedTimers[taskId].startTime;
-            const previousElapsedMs = updatedTimers[taskId].elapsedTime || 0;
-            // Calculate elapsed time in MILLISECONDS for precise progress calculation
-            const sessionElapsedMs = Date.now() - startTime; // milliseconds since start
-            const totalElapsedMs = previousElapsedMs + sessionElapsedMs; // total milliseconds
+            // Use baseElapsedTime instead of previously accumulated elapsedTime to prevent double counting
+            const baseElapsedMs = updatedTimers[taskId].baseElapsedTime || 0;
+            const sessionElapsedMs = Date.now() - startTime;
+            const totalElapsedMs = baseElapsedMs + sessionElapsedMs;
 
-            // Debug logging for timer calculation
-            if (
-              taskId === Object.keys(updatedTimers)[0] &&
-              sessionElapsedMs > 1000
-            ) {
-              console.log(`⚡ MILLISECOND TIMER DEBUG [${taskId}]:`, {
-                sessionElapsedMs,
-                previousElapsedMs,
-                totalElapsedMs,
-                realTimeSeconds: Math.round(sessionElapsedMs / 1000),
-                totalTimeSeconds: Math.round(totalElapsedMs / 1000),
-                // ADDITIONAL DEBUG
-                startTime,
-                currentTime: Date.now(),
-                timeDifference: Date.now() - startTime,
-                isTimeDifferenceCorrect:
-                  Date.now() - startTime === sessionElapsedMs,
-              });
-            }
-
-            // Update task progress based on time spent vs estimated time
             setTasks((prevTasks) =>
               prevTasks.map((task) => {
                 if (task.id === taskId) {
-                  // Use provided time or default to 30 minutes for timer calculations
                   const taskEstimatedMinutes =
                     task.estimatedTime > 0 ? task.estimatedTime : 30;
-                  const totalTimeMs = taskEstimatedMinutes * 60 * 1000; // EXACT FORMULA: minutes * 60 * 1000
-                  const elapsedMs = totalElapsedMs; // elapsedMs = Date.now() - startTime
-                  const rawProgressPercentage = (elapsedMs / totalTimeMs) * 100; // progress = (elapsedMs / totalTimeMs) * 100
+                  const totalTimeMs = taskEstimatedMinutes * 60 * 1000;
+                  const rawProgressPercentage =
+                    (totalElapsedMs / totalTimeMs) * 100;
                   const progressPercentage = Math.min(
                     Math.max(rawProgressPercentage, 0),
-                    100
-                  ); // Clamp to [0,100]
-
-                  // Calculate remaining time
-                  const remainingMs = Math.max(0, totalTimeMs - elapsedMs);
-                  const remainingMin = Math.floor(remainingMs / 60000);
-                  const remainingSec = Math.floor((remainingMs % 60000) / 1000);
-
-                  // Comprehensive debug with test case verification
-                  console.log(
-                    `🎯 TIMER PROGRESS DEBUG for Task "${task.title}":`,
-                    {
-                      taskEstimatedMinutes,
-                      totalTimeMs,
-                      elapsedMs,
-                      rawProgressPercentage,
-                      progressPercentage,
-                      remainingMs,
-                      remainingTime: `${remainingMin}m ${remainingSec}s`,
-                      equation: `${elapsedMs}ms / ${totalTimeMs}ms * 100 = ${rawProgressPercentage.toFixed(
-                        2
-                      )}%`,
-                      // TEST CASE VALIDATION
-                      testCase5Min:
-                        taskEstimatedMinutes === 5
-                          ? {
-                              expectedTotalMs: 300000,
-                              actualTotalMs: totalTimeMs,
-                              at6Seconds: `6000 / 300000 * 100 = 2%`,
-                              currentElapsedSec: Math.round(elapsedMs / 1000),
-                              shouldBe2PercentAt6s:
-                                elapsedMs >= 6000
-                                  ? ((6000 / totalTimeMs) * 100).toFixed(2) +
-                                    '% (expected 2%)'
-                                  : 'not reached 6s yet',
-                            }
-                          : null,
-                      testCase15Min:
-                        taskEstimatedMinutes === 15
-                          ? {
-                              expectedTotalMs: 900000,
-                              actualTotalMs: totalTimeMs,
-                              at2Minutes: `120000 / 900000 * 100 = 13.33%`,
-                              shouldBe13_33PercentAt2m:
-                                elapsedMs >= 120000
-                                  ? ((120000 / totalTimeMs) * 100).toFixed(2) +
-                                    '% (expected 13.33%)'
-                                  : 'not reached 2m yet',
-                            }
-                          : null,
-                      testCase1Min:
-                        taskEstimatedMinutes === 1
-                          ? {
-                              expectedTotalMs: 60000,
-                              actualTotalMs: totalTimeMs,
-                              at30Seconds: `30000 / 60000 * 100 = 50%`,
-                              shouldBe50PercentAt30s:
-                                elapsedMs >= 30000
-                                  ? ((30000 / totalTimeMs) * 100).toFixed(2) +
-                                    '% (expected 50%)'
-                                  : 'not reached 30s yet',
-                            }
-                          : null,
-                    }
+                    100,
                   );
 
-                  // Auto-stop timer when 100% complete
                   if (
                     progressPercentage >= 100 &&
                     updatedTimers[taskId].isRunning
@@ -353,30 +268,30 @@ function App() {
                     updatedTimers[taskId] = {
                       ...updatedTimers[taskId],
                       isRunning: false,
-                      elapsedTime: totalElapsedMs, // Store elapsed time in milliseconds
+                      elapsedTime: totalElapsedMs,
                     };
                     addToast(`Task "${task.title}" completed!`, 'success');
                   } else {
                     updatedTimers[taskId] = {
                       ...updatedTimers[taskId],
-                      elapsedTime: totalElapsedMs, // Store elapsed time in milliseconds
+                      elapsedTime: totalElapsedMs,
                     };
                   }
 
                   return {
                     ...task,
                     progress: Math.round(progressPercentage),
-                    timeSpent: totalElapsedMs, // Store time spent in milliseconds
+                    timeSpent: totalElapsedMs,
                     status:
                       progressPercentage >= 100
                         ? 'completed'
                         : progressPercentage > 0
-                        ? 'in-progress'
-                        : 'pending',
+                          ? 'in-progress'
+                          : 'pending',
                   };
                 }
                 return task;
-              })
+              }),
             );
           }
         });
@@ -393,49 +308,24 @@ function App() {
           if (updatedTimers[goalId].isRunning) {
             hasActiveTimers = true;
             const startTime = updatedTimers[goalId].startTime;
-            const previousElapsedMs = updatedTimers[goalId].elapsedTime || 0;
-            // Calculate elapsed time in MILLISECONDS for precise progress calculation
-            const sessionElapsedMs = Date.now() - startTime; // milliseconds since start
-            const totalElapsedMs = previousElapsedMs + sessionElapsedMs; // total milliseconds
+            // Use baseElapsedTime to prevent double counting
+            const baseElapsedMs = updatedTimers[goalId].baseElapsedTime || 0;
+            const sessionElapsedMs = Date.now() - startTime;
+            const totalElapsedMs = baseElapsedMs + sessionElapsedMs;
 
-            // Update goal progress based on time spent vs estimated time
             setGoals((prevGoals) =>
               prevGoals.map((goal) => {
                 if (goal.id === goalId) {
-                  // Use provided time or default to 60 minutes for timer calculations
                   const goalEstimatedMinutes =
                     goal.estimatedTime > 0 ? goal.estimatedTime : 60;
-                  const totalTimeMs = goalEstimatedMinutes * 60 * 1000; // EXACT FORMULA: minutes * 60 * 1000
-                  const elapsedMs = totalElapsedMs; // elapsedMs = Date.now() - startTime
-                  const rawProgressPercentage = (elapsedMs / totalTimeMs) * 100; // progress = (elapsedMs / totalTimeMs) * 100
+                  const totalTimeMs = goalEstimatedMinutes * 60 * 1000;
+                  const rawProgressPercentage =
+                    (totalElapsedMs / totalTimeMs) * 100;
                   const progressPercentage = Math.min(
                     Math.max(rawProgressPercentage, 0),
-                    100
-                  ); // Clamp to [0,100]
-
-                  // Calculate remaining time
-                  const remainingMs = Math.max(0, totalTimeMs - elapsedMs);
-                  const remainingMin = Math.floor(remainingMs / 60000);
-                  const remainingSec = Math.floor((remainingMs % 60000) / 1000);
-
-                  // Debug progress calculation with correct formula
-                  console.log(
-                    `🎯 TIMER PROGRESS DEBUG for Goal "${goal.title}":`,
-                    {
-                      goalEstimatedMinutes,
-                      totalTimeMs,
-                      elapsedMs,
-                      rawProgressPercentage,
-                      progressPercentage,
-                      remainingMs,
-                      remainingTime: `${remainingMin}m ${remainingSec}s`,
-                      equation: `${elapsedMs}ms / ${totalTimeMs}ms * 100 = ${rawProgressPercentage.toFixed(
-                        2
-                      )}%`,
-                    }
+                    100,
                   );
 
-                  // Auto-stop timer when 100% complete
                   if (
                     progressPercentage >= 100 &&
                     updatedTimers[goalId].isRunning
@@ -443,42 +333,43 @@ function App() {
                     updatedTimers[goalId] = {
                       ...updatedTimers[goalId],
                       isRunning: false,
-                      elapsedTime: totalElapsedMs, // Store elapsed time in milliseconds
+                      elapsedTime: totalElapsedMs,
                     };
                     addToast(`Goal "${goal.title}" completed!`, 'success');
                   } else {
                     updatedTimers[goalId] = {
                       ...updatedTimers[goalId],
-                      elapsedTime: totalElapsedMs, // Store elapsed time in milliseconds
+                      elapsedTime: totalElapsedMs,
                     };
                   }
 
                   return {
                     ...goal,
                     progress: Math.round(progressPercentage),
-                    timeSpent: totalElapsedMs, // Store time spent in milliseconds
+                    timeSpent: totalElapsedMs,
                     status:
                       progressPercentage >= 100
                         ? 'completed'
                         : progressPercentage > 0
-                        ? 'in-progress'
-                        : 'active',
+                          ? 'in-progress'
+                          : 'active',
                   };
                 }
                 return goal;
-              })
+              }),
             );
           }
         });
 
         return hasActiveTimers ? updatedTimers : prevTimers;
       });
-    }, 1000); // Update every second
+    }, 1000);
 
     return () => clearInterval(interval);
   }, [setTasks, setGoals]);
 
   // Timer functions
+  // Task Timer functions
   const startTimer = (taskId) => {
     setActiveTimers((prev) => {
       const existingTimer = prev[taskId];
@@ -488,7 +379,8 @@ function App() {
         ...prev,
         [taskId]: {
           startTime: Date.now(),
-          elapsedTime: previousElapsed, // Keep previous elapsed time
+          baseElapsedTime: previousElapsed, // Store previous time separately
+          elapsedTime: previousElapsed,
           isRunning: true,
         },
       };
@@ -501,15 +393,15 @@ function App() {
       const timer = prev[taskId];
       if (!timer || !timer.isRunning) return prev;
 
-      // Calculate the time elapsed during this session
-      const sessionElapsed = (Date.now() - timer.startTime) / 1000 / 3600;
-      const totalElapsed = timer.elapsedTime + sessionElapsed;
+      // Correctly calculate total milliseconds (Removed the wrong / 1000 / 3600 logic)
+      const sessionElapsedMs = Date.now() - timer.startTime;
+      const totalElapsedMs = (timer.baseElapsedTime || 0) + sessionElapsedMs;
 
       return {
         ...prev,
         [taskId]: {
           ...timer,
-          elapsedTime: totalElapsed,
+          elapsedTime: totalElapsedMs,
           isRunning: false,
         },
       };
@@ -536,7 +428,8 @@ function App() {
         ...prev,
         [goalId]: {
           startTime: Date.now(),
-          elapsedTime: previousElapsed, // Keep previous elapsed time
+          baseElapsedTime: previousElapsed, // Store previous time separately
+          elapsedTime: previousElapsed,
           isRunning: true,
         },
       };
@@ -549,15 +442,15 @@ function App() {
       const timer = prev[goalId];
       if (!timer || !timer.isRunning) return prev;
 
-      // Calculate the time elapsed during this session
-      const sessionElapsed = (Date.now() - timer.startTime) / 1000 / 3600;
-      const totalElapsed = timer.elapsedTime + sessionElapsed;
+      // Correctly calculate total milliseconds
+      const sessionElapsedMs = Date.now() - timer.startTime;
+      const totalElapsedMs = (timer.baseElapsedTime || 0) + sessionElapsedMs;
 
       return {
         ...prev,
         [goalId]: {
           ...timer,
-          elapsedTime: totalElapsed,
+          elapsedTime: totalElapsedMs,
           isRunning: false,
         },
       };
@@ -728,14 +621,14 @@ function App() {
 
   const getTasksForDate = (date) => {
     return tasks.filter(
-      (task) => task.dueDate && isSameDay(task.dueDate, date)
+      (task) => task.dueDate && isSameDay(task.dueDate, date),
     );
   };
 
   const selectDate = (dateString) => {
     const selectedDate = new Date(dateString);
     setCurrentCalendarDate(
-      new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
+      new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1),
     );
   };
 
@@ -784,8 +677,8 @@ function App() {
                 progress: newStatus === 'completed' ? 100 : 0,
                 completedAt: newStatus === 'completed' ? new Date() : null,
               }
-            : t
-        )
+            : t,
+        ),
       );
 
       addToast(`Task "${task.title}" ${actionText}!`, 'success');
@@ -830,12 +723,12 @@ function App() {
                 progressValue === 100
                   ? 'completed'
                   : progressValue > 0
-                  ? 'in-progress'
-                  : 'pending',
+                    ? 'in-progress'
+                    : 'pending',
               completedAt: progressValue === 100 ? new Date() : null,
             }
-          : task
-      )
+          : task,
+      ),
     );
   };
 
@@ -860,8 +753,8 @@ function App() {
               progress: progressValue,
               status: progressValue === 100 ? 'completed' : 'active',
             }
-          : goal
-      )
+          : goal,
+      ),
     );
   };
 
@@ -883,7 +776,7 @@ function App() {
       dueDate: taskForm.dueDate ? new Date(taskForm.dueDate) : null,
       estimatedTime: parseFloat(taskForm.estimatedTime) || 0, // Store 0 if no time provided
       userProvidedTime: Boolean(
-        taskForm.estimatedTime && parseFloat(taskForm.estimatedTime) > 0
+        taskForm.estimatedTime && parseFloat(taskForm.estimatedTime) > 0,
       ), // Track if user provided time
       status: 'pending',
       progress: 0,
@@ -924,7 +817,9 @@ function App() {
     };
 
     setTasks((prevTasks) =>
-      prevTasks.map((task) => (task.id === editingTask.id ? updatedTask : task))
+      prevTasks.map((task) =>
+        task.id === editingTask.id ? updatedTask : task,
+      ),
     );
     addToast(`Task "${updatedTask.title}" updated successfully!`, 'success');
     closeModal('edit-task-modal');
@@ -946,7 +841,7 @@ function App() {
       targetDate: goalForm.targetDate ? new Date(goalForm.targetDate) : null,
       estimatedTime: parseFloat(goalForm.estimatedTime) || 0, // Store 0 if no time provided
       userProvidedTime: Boolean(
-        goalForm.estimatedTime && parseFloat(goalForm.estimatedTime) > 0
+        goalForm.estimatedTime && parseFloat(goalForm.estimatedTime) > 0,
       ), // Track if user provided time
       status: 'active',
       progress: 0,
@@ -994,7 +889,7 @@ function App() {
 
     const totalDays = Math.max(
       1,
-      Math.ceil((today - weekStart) / (1000 * 60 * 60 * 24))
+      Math.ceil((today - weekStart) / (1000 * 60 * 60 * 24)),
     );
     const dailyAverage = (weeklyCompleted / totalDays).toFixed(1);
 
@@ -1208,7 +1103,7 @@ function App() {
                             <span className="task-tag timer-display">
                               ⏱️{' '}
                               {formatElapsedTimeFromMs(
-                                activeTimers[task.id].elapsedTime
+                                activeTimers[task.id].elapsedTime,
                               )}
                             </span>
                           )}
@@ -1269,20 +1164,20 @@ function App() {
                               (currentTimeMs / totalTimeMs) * 100;
                             const progressPercentage = Math.min(
                               Math.max(rawProgressPercentage, 0),
-                              100
+                              100,
                             ); // Clamp [0,100]
                             const isOvertime = rawProgressPercentage > 100;
 
                             // Calculate remaining time
                             const remainingMs = Math.max(
                               0,
-                              totalTimeMs - currentTimeMs
+                              totalTimeMs - currentTimeMs,
                             );
                             const remainingMin = Math.floor(
-                              remainingMs / 60000
+                              remainingMs / 60000,
                             );
                             const remainingSec = Math.floor(
-                              (remainingMs % 60000) / 1000
+                              (remainingMs % 60000) / 1000,
                             );
 
                             // Debug render progress
@@ -1298,9 +1193,9 @@ function App() {
                                 remainingTime: `${remainingMin}m ${remainingSec}s`,
                                 isOvertime,
                                 formula: `${currentTimeMs}ms / ${totalTimeMs}ms * 100 = ${rawProgressPercentage.toFixed(
-                                  2
+                                  2,
                                 )}%`,
-                              }
+                              },
                             );
 
                             return (
@@ -1489,7 +1384,7 @@ function App() {
                           <span className="task-tag timer-display">
                             ⏱️{' '}
                             {formatElapsedTimeFromMs(
-                              activeTimers[task.id].elapsedTime
+                              activeTimers[task.id].elapsedTime,
                             )}
                           </span>
                         )}
@@ -1581,7 +1476,7 @@ function App() {
                       <option key={year} value={year}>
                         {year}
                       </option>
-                    )
+                    ),
                   )}
                 </select>
 
@@ -1709,7 +1604,7 @@ function App() {
                                 {formatElapsedTimeFromMs(
                                   activeGoalTimers[goal.id]?.elapsedTime ||
                                     goal.timeSpent ||
-                                    0
+                                    0,
                                 )}
                               </span>
                             </div>
@@ -1731,20 +1626,20 @@ function App() {
                                   (currentTimeMs / totalTimeMs) * 100;
                                 const progressPercentage = Math.min(
                                   Math.max(rawProgressPercentage, 0),
-                                  100
+                                  100,
                                 ); // Clamp [0,100]
                                 const isOvertime = rawProgressPercentage > 100;
 
                                 // Calculate remaining time
                                 const remainingMs = Math.max(
                                   0,
-                                  totalTimeMs - currentTimeMs
+                                  totalTimeMs - currentTimeMs,
                                 );
                                 const remainingMin = Math.floor(
-                                  remainingMs / 60000
+                                  remainingMs / 60000,
                                 );
                                 const remainingSec = Math.floor(
-                                  (remainingMs % 60000) / 1000
+                                  (remainingMs % 60000) / 1000,
                                 );
 
                                 // Debug render progress
@@ -1760,9 +1655,9 @@ function App() {
                                     remainingTime: `${remainingMin}m ${remainingSec}s`,
                                     isOvertime,
                                     formula: `${currentTimeMs}ms / ${totalTimeMs}ms * 100 = ${rawProgressPercentage.toFixed(
-                                      2
+                                      2,
                                     )}%`,
-                                  }
+                                  },
                                 );
 
                                 return (
@@ -1774,7 +1669,7 @@ function App() {
                                       style={{
                                         width: `${Math.min(
                                           progressPercentage,
-                                          100
+                                          100,
                                         )}%`,
                                         background: isOvertime
                                           ? 'linear-gradient(90deg, #ff5722, #d32f2f)'
@@ -2380,10 +2275,10 @@ function App() {
                   toast.type === 'success'
                     ? 'check-circle'
                     : toast.type === 'error'
-                    ? 'exclamation-circle'
-                    : toast.type === 'warning'
-                    ? 'exclamation-triangle'
-                    : 'info-circle'
+                      ? 'exclamation-circle'
+                      : toast.type === 'warning'
+                        ? 'exclamation-triangle'
+                        : 'info-circle'
                 }`}
               ></i>
               <span className="toast-message">{toast.message}</span>
